@@ -28,6 +28,21 @@ data:
     write_timeout: 0.2s
   mongo:
     uri: mongodb://root:123456@localhost:27017
+codebuddy:
+  api_endpoint: https://copilot.tencent.com
+  allowed_endpoints: https://copilot.tencent.com,https://www.codebuddy.ai
+  models: "glm-5.2,deepseek-v4-pro"
+  forced_temperature: "1"          # 空 = 保留客户端值
+  rotation_count: 1                # 每 N 次请求切换凭证
+  auto_checkin_enabled: true
+  checkin_hour: 9
+  checkin_minute: 30
+  background_delay_min_seconds: 5
+  background_delay_max_seconds: 20
+  cli_version: "2.107.0"
+  models_cache_ttl_seconds: 30
+  admin_username: admin
+  admin_password: admin123         # 仅用于首启动建户
 log:
   log_level: debug
   mode: both               #  file or console or both

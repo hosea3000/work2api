@@ -4,6 +4,8 @@
 package wire
 
 import (
+	"github.com/yourname/work2api/internal/bootstrap"
+	"github.com/yourname/work2api/internal/config"
 	"github.com/yourname/work2api/internal/handler"
 	"github.com/yourname/work2api/internal/job"
 	"github.com/yourname/work2api/internal/repository"
@@ -26,36 +28,58 @@ var repositorySet = wire.NewSet(
 	repository.NewRepository,
 	repository.NewTransaction,
 	repository.NewUserRepository,
+	repository.NewGatewayRepository,
 )
 
 var serviceSet = wire.NewSet(
 	service.NewService,
 	service.NewUserService,
+	config.LoadCodeBuddyConfig,
+	bootstrap.NewCodeBuddyClient,
+	bootstrap.NewRequestPolicies,
+	bootstrap.NewModelsServiceFromConfig,
+	service.NewCredentialPool,
+	service.NewCredentialService,
+	service.NewAPIKeyService,
+	service.NewSessionService,
+	service.NewCheckinService,
+	service.NewChatExecutor,
 )
 
 var handlerSet = wire.NewSet(
 	handler.NewHandler,
 	handler.NewUserHandler,
+	handler.NewAuthHandler,
+	handler.NewAPIKeyHandler,
+	handler.NewCredentialHandler,
+	handler.NewOpenAIHandler,
+	handler.NewAdminStubHandler,
+	handler.NewCodeBuddyAuthHandler,
+	service.NewAuthStateStore,
+	service.NewOAuthService,
+	service.NewTokenRefreshService,
 )
 
 var jobSet = wire.NewSet(
 	job.NewJob,
 	job.NewUserJob,
+	job.NewCheckinJob,
 )
 var serverSet = wire.NewSet(
 	server.NewHTTPServer,
 	server.NewJobServer,
+	server.NewCheckinJobServer,
 )
 
 // build App
 func newApp(
 	httpServer *http.Server,
 	jobServer *server.JobServer,
-	// task *server.Task,
+	checkinServer *server.CheckinJobServer,
 ) *app.App {
 	return app.NewApp(
-		app.WithServer(httpServer, jobServer),
-		app.WithName("demo-server"),
+		app.WithServer(httpServer, jobServer, checkinServer),
+		app.WithName("work2api"),
 	)
 }
 

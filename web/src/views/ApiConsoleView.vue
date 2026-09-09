@@ -1,0 +1,319 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import { Play, Square } from '@lucide/vue';
+import { ApiError } from '../api/client';
+import { anthropicPlaygroundApi, openaiPlaygroundApi } from '../api/admin';
+import type { AnthropicMessageRequest, ChatCompletionRequest } from '../types';
+import { SseStreamDecoder } from '../utils/sse';
+import { useToast } from '../composables/useToast';
+import CCard from '../components/ui/CCard.vue';
+import CAlert from '../components/ui/CAlert.vue';
+import CForm, { type FormRules } from '../components/ui/CForm.vue';
+import CFormItem from '../components/ui/CFormItem.vue';
+import CSelect from '../components/ui/CSelect.vue';
+import CInput from '../components/ui/CInput.vue';
+import CCheckbox from '../components/ui/CCheckbox.vue';
+import CRadioButton from '../components/ui/CRadioButton.vue';
+import CRadioGroup from '../components/ui/CRadioGroup.vue';
+import CButton from '../components/ui/CButton.vue';
+import RefreshButton from '../components/RefreshButton.vue';
+import { useSessionStore } from '../stores/session';
+import { adminQueryKeys } from '../utils/adminQueryKeys';
+
+const toast = useToast();
+const session = useSessionStore();
+const queryKeys = adminQueryKeys(session.username);
+type PlaygroundProtocol = 'openai' | 'anthropic';
+const protocol = ref<PlaygroundProtocol>('openai');
+const selectedModel = ref('');
+const prompt = ref('Hello, what is 2+2?');
+const stream = ref(false);
+const output = ref('点击发送查看响应');
+const loading = ref(false);
+let pendingStreamOutput = '';
+let streamOutputFrame: number | null = null;
+
+// prompt 是 ref，放入 reactive 后模板校验读取到的是 unwrap 后的字符串。
+const consoleForm = reactive({ prompt });
+const consoleFormRef = ref<InstanceType<typeof CForm> | null>(null);
+const consoleRules: FormRules = {
+  prompt: { required: true, whitespace: true, message: '请输入消息', trigger: 'input' },
+};
+
+const abortController = ref<AbortController | null>(null);
+
+function flushStreamOutput(): void {
+  if (streamOutputFrame !== null) {
+    window.cancelAnimationFrame(streamOutputFrame);
+    streamOutputFrame = null;
+  }
+  if (!pendingStreamOutput) return;
+  output.value += pendingStreamOutput;
+  pendingStreamOutput = '';
+}
+
+function queueStreamOutput(value: unknown): void {
+  pendingStreamOutput += `${JSON.stringify(value, null, 2)}\n\n`;
+  if (streamOutputFrame !== null) return;
+  streamOutputFrame = window.requestAnimationFrame(() => {
+    streamOutputFrame = null;
+    if (!pendingStreamOutput) return;
+    output.value += pendingStreamOutput;
+    pendingStreamOutput = '';
+  });
+}
+
+function resetStreamOutput(): void {
+  if (streamOutputFrame !== null) {
+    window.cancelAnimationFrame(streamOutputFrame);
+    streamOutputFrame = null;
+  }
+  pendingStreamOutput = '';
+}
+
+const modelsQuery = useQuery({
+  queryKey: computed(() => queryKeys.playgroundModels(protocol.value)),
+  queryFn: ({ queryKey, signal }) =>
+    queryKey[3] === 'openai'
+      ? openaiPlaygroundApi.models(signal)
+      : anthropicPlaygroundApi.models(signal),
+});
+
+const modelOptions = computed(() =>
+  (modelsQuery.data.value?.data || []).map((item) => ({
+    label: item.id,
+    value: item.id,
+  })),
+);
+
+function abortInFlight(): void {
+  if (abortController.value) {
+    abortController.value.abort();
+    abortController.value = null;
+  }
+}
+
+watch(protocol, () => {
+  abortInFlight();
+  resetStreamOutput();
+  selectedModel.value = '';
+  output.value = '点击发送查看响应';
+});
+
+/**
+ * 流式请求使用 SseStreamDecoder 跨 chunk 累积解析；非流式请求也复用同一
+ * AbortController，方便「停止」按钮和组件卸载统一中止。
+ */
+async function doSend(): Promise<void> {
+  // 非流式请求期间禁止重复点击；流式请求点击按钮走 stop() 逻辑
+  if (loading.value && !stream.value) return;
+
+  loading.value = true;
+  output.value = '';
+  resetStreamOutput();
+
+  const requestStream = stream.value;
+  const requestProtocol = protocol.value;
+  const model =
+    selectedModel.value ||
+    modelOptions.value[0]?.value ||
+    (requestProtocol === 'openai' ? 'glm-5.2' : 'anthropic/codebuddy/glm-5.2');
+  const controller = new AbortController();
+  abortController.value = controller;
+
+  try {
+    const messages = [{ role: 'user' as const, content: prompt.value }];
+    const response =
+      requestProtocol === 'openai'
+        ? await openaiPlaygroundApi.chat(
+            {
+              model,
+              messages,
+              stream: requestStream,
+            } satisfies ChatCompletionRequest,
+            controller.signal,
+          )
+        : await anthropicPlaygroundApi.chat(
+            {
+              model,
+              max_tokens: 1024,
+              system: 'You are a helpful assistant.',
+              messages,
+              stream: requestStream,
+            } satisfies AnthropicMessageRequest,
+            controller.signal,
+          );
+
+    if (!response.ok) {
+      output.value = await response.text();
+      toast.error(`HTTP ${response.status}`);
+      return;
+    }
+
+    if (!requestStream) {
+      output.value = JSON.stringify(await response.json(), null, 2);
+      toast.success('请求完成');
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('响应体不可读');
+    }
+
+    try {
+      const decoder = new SseStreamDecoder();
+      const textDecoder = new TextDecoder();
+      let doneReceived = false;
+
+      readLoop: while (true) {
+        const { done, value } = await reader.read();
+        const results = done
+          ? [...decoder.feed(textDecoder.decode()), ...decoder.finish()]
+          : decoder.feed(textDecoder.decode(value, { stream: true }));
+
+        for (const result of results) {
+          if (result.type === 'error') throw new Error(result.message);
+          if (result.type === 'done') {
+            if (requestProtocol === 'openai') {
+              doneReceived = true;
+              break readLoop;
+            }
+            continue;
+          }
+          queueStreamOutput(
+            result.event ? { event: result.event, data: result.data } : result.data,
+          );
+          if (requestProtocol === 'anthropic' && result.event === 'message_stop') {
+            doneReceived = true;
+            break readLoop;
+          }
+        }
+
+        if (done) break;
+      }
+
+      if (!doneReceived) {
+        throw new Error(
+          requestProtocol === 'openai'
+            ? '流式响应在 [DONE] 之前结束'
+            : '流式响应在 message_stop 之前结束',
+        );
+      }
+      flushStreamOutput();
+      toast.success('流式请求完成');
+    } finally {
+      flushStreamOutput();
+      // 主动释放 reader，避免连接泄漏（cancel 会向服务端发送取消信号）
+      try {
+        await reader.cancel();
+      } catch {
+        // cancel 可能因连接已关闭而抛错，忽略
+      }
+      reader.releaseLock();
+    }
+  } catch (error) {
+    flushStreamOutput();
+    if (controller.signal.aborted) {
+      if (protocol.value !== requestProtocol) return;
+      // 用户主动取消，不算错误
+      output.value = '已取消';
+      toast.info('请求已取消');
+      return;
+    }
+    if (error instanceof ApiError && error.status === 401) {
+      output.value = '认证过期，请重新登录';
+      toast.error('认证过期，请重新登录');
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    output.value =
+      requestStream && output.value ? `${output.value.trimEnd()}\n\n错误：${message}` : message;
+    toast.error('请求失败');
+  } finally {
+    loading.value = false;
+    abortController.value = null;
+  }
+}
+
+async function send(): Promise<void> {
+  if (loading.value && !stream.value) return;
+  try {
+    await consoleFormRef.value?.validate();
+  } catch {
+    return;
+  }
+  await doSend();
+}
+
+function stop(): void {
+  abortInFlight();
+}
+
+onBeforeUnmount(() => {
+  abortInFlight();
+  resetStreamOutput();
+});
+</script>
+
+<template>
+  <div class="console-layout grid grid-cols-1 gap-4">
+    <CCard title="请求">
+      <CForm ref="consoleFormRef" :model="consoleForm" :rules="consoleRules" label-placement="top">
+        <div class="flex flex-col gap-4">
+          <CRadioGroup v-model="protocol" class="self-start" aria-label="协议">
+            <CRadioButton value="openai">OpenAI</CRadioButton>
+            <CRadioButton value="anthropic">Anthropic</CRadioButton>
+          </CRadioGroup>
+          <div class="console-model-row flex items-center gap-2">
+            <CSelect
+              v-model="selectedModel"
+              class="min-w-0 flex-1"
+              :options="modelOptions"
+              :loading="modelsQuery.isLoading.value"
+              placeholder="模型"
+              filterable
+            />
+            <RefreshButton :query="modelsQuery" success-message="模型列表已刷新" />
+          </div>
+          <CAlert v-if="modelsQuery.isError.value" type="error" title="模型列表加载失败">
+            {{ (modelsQuery.error.value as Error)?.message ?? '未知错误' }}
+            <template #action>
+              <RefreshButton :query="modelsQuery" label="重试" size="sm" variant="danger" />
+            </template>
+          </CAlert>
+          <CFormItem path="prompt">
+            <CInput
+              v-model="prompt"
+              type="textarea"
+              :autosize="{ minRows: 8, maxRows: 14 }"
+              placeholder="消息"
+            />
+          </CFormItem>
+          <div class="console-action-row flex items-center justify-end gap-3">
+            <CCheckbox v-model="stream" :disabled="loading">流式响应</CCheckbox>
+            <CButton v-if="loading" variant="danger" @click="stop">
+              <template #icon>
+                <Square :size="16" />
+              </template>
+              停止
+            </CButton>
+            <CButton v-else variant="primary" :loading="loading" @click="send">
+              <template #icon>
+                <Play :size="16" />
+              </template>
+              发送
+            </CButton>
+          </div>
+        </div>
+      </CForm>
+    </CCard>
+
+    <CCard title="响应">
+      <pre
+        class="min-h-[20rem] overflow-auto rounded-lg bg-slate-950 p-3.5 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-slate-200"
+        >{{ output }}</pre>
+    </CCard>
+  </div>
+</template>

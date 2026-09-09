@@ -1,5 +1,59 @@
-storage/logs
-.idea
+# Binaries / build output
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Build artifacts from make
+/main
+/server
+/migration
+/task
+
+# Go workspace
+*.swp
+*.swo
+*~
+
+# Test / coverage
+coverage.txt
+coverage.html
+*.prof
+
+# Logs & storage
+storage/logs/
+storage/uploads/
 *.log
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config & secrets
+config/local.yml
+config/*.local.yml
+.env
+.env.*
+
+# Deploy runtime data
 deploy/docker-compose/conf
 deploy/docker-compose/data
+
+# Generated swagger docs (regenerate with make swag)
+docs/docs.go
+docs/swagger.json
+docs/swagger.yaml
+
+# Frontend
+web/node_modules/
+web/dist/

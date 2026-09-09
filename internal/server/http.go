@@ -2,8 +2,8 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
-	apiV1 "github.com/yourname/work2api/api/v1"
 	"github.com/yourname/work2api/docs"
+	"github.com/yourname/work2api/internal/handler"
 	"github.com/yourname/work2api/internal/middleware"
 	"github.com/yourname/work2api/internal/router"
 	"github.com/yourname/work2api/pkg/server/http"
@@ -39,12 +39,9 @@ func NewHTTPServer(
 		middleware.RequestLogMiddleware(deps.Logger),
 		//middleware.SignMiddleware(log),
 	)
-	s.GET("/", func(ctx *gin.Context) {
-		deps.Logger.WithContext(ctx).Info("hello")
-		apiV1.HandleSuccess(ctx, map[string]interface{}{
-			":)": "Thank you for using nunu!",
-		})
-	})
+
+	router.InitGatewayRouter(deps, s.Engine)
+	handler.RegisterSPARoutes(s.Engine, distFS, "webdist/dist")
 
 	v1 := s.Group("/v1")
 	router.InitUserRouter(deps, v1)

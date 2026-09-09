@@ -7,6 +7,10 @@
 package wire
 
 import (
+	"github.com/google/wire"
+	"github.com/spf13/viper"
+	"github.com/yourname/work2api/internal/bootstrap"
+	"github.com/yourname/work2api/internal/config"
 	"github.com/yourname/work2api/internal/handler"
 	"github.com/yourname/work2api/internal/job"
 	"github.com/yourname/work2api/internal/repository"
@@ -18,8 +22,6 @@ import (
 	"github.com/yourname/work2api/pkg/log"
 	"github.com/yourname/work2api/pkg/server/http"
 	"github.com/yourname/work2api/pkg/sid"
-	"github.com/google/wire"
-	"github.com/spf13/viper"
 )
 
 // Injectors from wire.go:
@@ -35,38 +37,71 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	userRepository := repository.NewUserRepository(repositoryRepository)
 	userService := service.NewUserService(serviceService, userRepository)
 	userHandler := handler.NewUserHandler(handlerHandler, userService)
+	gatewayRepository := repository.NewGatewayRepository(repositoryRepository)
+	sessionService := service.NewSessionService(gatewayRepository)
+	authHandler := handler.NewAuthHandler(handlerHandler, sessionService)
+	apiKeyService := service.NewAPIKeyService(gatewayRepository)
+	apiKeyHandler := handler.NewAPIKeyHandler(handlerHandler, apiKeyService)
+	codeBuddyConfig, err := config.LoadCodeBuddyConfig(viperViper)
+	if err != nil {
+		return nil, nil, err
+	}
+	credentialPool := service.NewCredentialPool(codeBuddyConfig)
+	client := bootstrap.NewCodeBuddyClient(codeBuddyConfig)
+	credentialService := service.NewCredentialService(gatewayRepository, credentialPool, codeBuddyConfig, client)
+	checkinService := service.NewCheckinService(gatewayRepository, credentialService, client, codeBuddyConfig)
+	modelsService := bootstrap.NewModelsServiceFromConfig(codeBuddyConfig, client, credentialService)
+	requestPolicies := bootstrap.NewRequestPolicies(codeBuddyConfig)
+	chatExecutor := service.NewChatExecutor(credentialService, client, requestPolicies)
+	credentialHandler := handler.NewCredentialHandler(handlerHandler, credentialService, checkinService, modelsService, chatExecutor)
+	openAIHandler := handler.NewOpenAIHandler(handlerHandler, chatExecutor, modelsService)
+	adminStubHandler := handler.NewAdminStubHandler(handlerHandler)
+	authStateStore := service.NewAuthStateStore()
+	oAuthService := service.NewOAuthService(client, credentialService, modelsService, authStateStore)
+	codeBuddyAuthHandler := handler.NewCodeBuddyAuthHandler(handlerHandler, oAuthService)
 	routerDeps := router.RouterDeps{
-		Logger:      logger,
-		Config:      viperViper,
-		JWT:         jwtJWT,
-		UserHandler: userHandler,
+		Logger:               logger,
+		Config:               viperViper,
+		JWT:                  jwtJWT,
+		UserHandler:          userHandler,
+		AuthHandler:          authHandler,
+		APIKeyHandler:        apiKeyHandler,
+		CredentialHandler:    credentialHandler,
+		OpenAIHandler:        openAIHandler,
+		AdminStubHandler:     adminStubHandler,
+		CodeBuddyAuthHandler: codeBuddyAuthHandler,
+		SessionService:       sessionService,
+		APIKeyService:        apiKeyService,
 	}
 	httpServer := server.NewHTTPServer(routerDeps)
 	jobJob := job.NewJob(transaction, logger, sidSid)
 	userJob := job.NewUserJob(jobJob, userRepository)
 	jobServer := server.NewJobServer(logger, userJob)
-	appApp := newApp(httpServer, jobServer)
+	checkinJob := job.NewCheckinJob(checkinService, codeBuddyConfig)
+	tokenRefreshService := service.NewTokenRefreshService(credentialService, client)
+	checkinJobServer := server.NewCheckinJobServer(logger, checkinJob, codeBuddyConfig, gatewayRepository, sessionService, credentialService, tokenRefreshService)
+	appApp := newApp(httpServer, jobServer, checkinJobServer)
 	return appApp, func() {
 	}, nil
 }
 
 // wire.go:
 
-var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository)
+var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewGatewayRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewUserService)
+var serviceSet = wire.NewSet(service.NewService, service.NewUserService, config.LoadCodeBuddyConfig, bootstrap.NewCodeBuddyClient, bootstrap.NewRequestPolicies, bootstrap.NewModelsServiceFromConfig, service.NewCredentialPool, service.NewCredentialService, service.NewAPIKeyService, service.NewSessionService, service.NewCheckinService, service.NewChatExecutor)
 
-var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler)
+var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewAuthHandler, handler.NewAPIKeyHandler, handler.NewCredentialHandler, handler.NewOpenAIHandler, handler.NewAdminStubHandler, handler.NewCodeBuddyAuthHandler, service.NewAuthStateStore, service.NewOAuthService, service.NewTokenRefreshService)
 
-var jobSet = wire.NewSet(job.NewJob, job.NewUserJob)
+var jobSet = wire.NewSet(job.NewJob, job.NewUserJob, job.NewCheckinJob)
 
-var serverSet = wire.NewSet(server.NewHTTPServer, server.NewJobServer)
+var serverSet = wire.NewSet(server.NewHTTPServer, server.NewJobServer, server.NewCheckinJobServer)
 
 // build App
 func newApp(
 	httpServer *http.Server,
 	jobServer *server.JobServer,
-
+	checkinServer *server.CheckinJobServer,
 ) *app.App {
-	return app.NewApp(app.WithServer(httpServer, jobServer), app.WithName("demo-server"))
+	return app.NewApp(app.WithServer(httpServer, jobServer, checkinServer), app.WithName("work2api"))
 }

@@ -2,8 +2,9 @@ package job
 
 import (
 	"context"
-	"github.com/yourname/work2api/internal/repository"
 	"time"
+
+	"github.com/yourname/work2api/internal/repository"
 )
 
 type UserJob interface {
@@ -28,7 +29,7 @@ type userJob struct {
 func (t userJob) KafkaConsumer(ctx context.Context) error {
 	// do something
 	for {
-		t.logger.Info("KafkaConsumer")
+		//t.logger.Info("KafkaConsumer")
 		time.Sleep(time.Second * 5)
 	}
 }
