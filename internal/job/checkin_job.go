@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/service"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/service"
 )
 
 // CheckinJob 每日签到调度（每天 checkin_hour:checkin_minute 本地时区），触发两个 provider 的签到。

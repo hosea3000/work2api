@@ -3,12 +3,12 @@ package server
 import (
 	"context"
 
-	"github.com/yourname/work2api/internal/bootstrap"
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/job"
-	"github.com/yourname/work2api/internal/repository"
-	"github.com/yourname/work2api/internal/service"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/bootstrap"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/job"
+	"github.com/hosea3000/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/service"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 // CheckinJobServer 将签到调度与两个 provider 的凭证刷新扫描作为 app server 运行。

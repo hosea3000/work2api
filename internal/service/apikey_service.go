@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/repository"
 )
 
 // API Key 名称校验错误。

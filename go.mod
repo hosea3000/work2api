@@ -1,4 +1,4 @@
-module github.com/yourname/work2api
+module github.com/hosea3000/work2api
 
 go 1.24.10
 

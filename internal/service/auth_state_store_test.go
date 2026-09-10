@@ -8,8 +8,8 @@ import (
 
 	"encoding/base64"
 
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/upstream/codebuddy"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/upstream/codebuddy"
 )
 
 func TestAuthStateStoreTTLAndConsume(t *testing.T) {

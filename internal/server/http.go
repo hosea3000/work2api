@@ -4,12 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/yourname/work2api/docs"
-	"github.com/yourname/work2api/internal/handler"
-	"github.com/yourname/work2api/internal/middleware"
-	"github.com/yourname/work2api/internal/router"
-	"github.com/yourname/work2api/pkg/server/http"
-	web "github.com/yourname/work2api/web"
+	"github.com/hosea3000/work2api/docs"
+	"github.com/hosea3000/work2api/internal/handler"
+	"github.com/hosea3000/work2api/internal/middleware"
+	"github.com/hosea3000/work2api/internal/router"
+	"github.com/hosea3000/work2api/pkg/server/http"
+	web "github.com/hosea3000/work2api/web"
 )
 
 func NewHTTPServer(

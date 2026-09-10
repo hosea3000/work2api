@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/upstream/codebuddy"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/upstream/codebuddy"
 )
 
 // RefreshWindowSeconds 临期窗口：expires_at − 24h 内触发刷新（对齐 REFRESH_WINDOW_SECONDS）。

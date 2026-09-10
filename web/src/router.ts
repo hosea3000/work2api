@@ -42,7 +42,7 @@ const router = createRouter({
 router.afterEach((to, _from, failure) => {
   if (failure) return;
   const title = typeof to.meta.title === 'string' ? to.meta.title : '管理台';
-  document.title = `${title} · CodeBuddy2API`;
+  document.title = `${title} · Work2API`;
 });
 
 export default router;

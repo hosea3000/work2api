@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/model"
 )
 
 func testConf(rotation int) *config.CodeBuddyConfig {

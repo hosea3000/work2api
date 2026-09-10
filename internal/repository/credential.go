@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/yourname/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/model"
 	"gorm.io/gorm"
 )
 

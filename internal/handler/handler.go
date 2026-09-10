@@ -2,8 +2,8 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/pkg/jwt"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/jwt"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 type Handler struct {

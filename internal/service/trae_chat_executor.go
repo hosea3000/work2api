@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 // TraeChatExecutor TRAE 聊天执行器：镜像 ChatExecutor 骨架，上游协议走 trae 适配器。

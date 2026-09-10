@@ -7,13 +7,13 @@
 package wire
 
 import (
-	"github.com/yourname/work2api/internal/repository"
-	"github.com/yourname/work2api/internal/server"
-	"github.com/yourname/work2api/internal/task"
-	"github.com/yourname/work2api/pkg/app"
-	"github.com/yourname/work2api/pkg/log"
-	"github.com/yourname/work2api/pkg/sid"
 	"github.com/google/wire"
+	"github.com/hosea3000/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/server"
+	"github.com/hosea3000/work2api/internal/task"
+	"github.com/hosea3000/work2api/pkg/app"
+	"github.com/hosea3000/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/sid"
 	"github.com/spf13/viper"
 )
 

@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1 "github.com/yourname/work2api/api/v1"
+	v1 "github.com/hosea3000/work2api/api/v1"
 	gomock "github.com/golang/mock/gomock"
 )
 

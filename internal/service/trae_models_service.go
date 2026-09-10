@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 // TraeModelsService TRAE 模型列表：上游 get_detail_param 的 config_name 列表，TTL 缓存。

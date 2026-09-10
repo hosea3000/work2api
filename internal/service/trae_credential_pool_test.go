@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourname/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/model"
 )
 
 func TestTraePoolFiltersActive(t *testing.T) {

@@ -8,20 +8,20 @@ package wire
 
 import (
 	"github.com/google/wire"
+	"github.com/hosea3000/work2api/internal/bootstrap"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/handler"
+	"github.com/hosea3000/work2api/internal/job"
+	"github.com/hosea3000/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/router"
+	"github.com/hosea3000/work2api/internal/server"
+	"github.com/hosea3000/work2api/internal/service"
+	"github.com/hosea3000/work2api/pkg/app"
+	"github.com/hosea3000/work2api/pkg/jwt"
+	"github.com/hosea3000/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/server/http"
+	"github.com/hosea3000/work2api/pkg/sid"
 	"github.com/spf13/viper"
-	"github.com/yourname/work2api/internal/bootstrap"
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/handler"
-	"github.com/yourname/work2api/internal/job"
-	"github.com/yourname/work2api/internal/repository"
-	"github.com/yourname/work2api/internal/router"
-	"github.com/yourname/work2api/internal/server"
-	"github.com/yourname/work2api/internal/service"
-	"github.com/yourname/work2api/pkg/app"
-	"github.com/yourname/work2api/pkg/jwt"
-	"github.com/yourname/work2api/pkg/log"
-	"github.com/yourname/work2api/pkg/server/http"
-	"github.com/yourname/work2api/pkg/sid"
 )
 
 // Injectors from wire.go:

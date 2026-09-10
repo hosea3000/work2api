@@ -1,10 +1,10 @@
 package handler
 
 import (
-	v1 "github.com/yourname/work2api/api/v1"
-	"github.com/yourname/work2api/internal/handler"
-	"github.com/yourname/work2api/internal/middleware"
-	"github.com/yourname/work2api/test/mocks/service"
+	v1 "github.com/hosea3000/work2api/api/v1"
+	"github.com/hosea3000/work2api/internal/handler"
+	"github.com/hosea3000/work2api/internal/middleware"
+	"github.com/hosea3000/work2api/test/mocks/service"
 	"net/http"
 	"testing"
 

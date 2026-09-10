@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/upstream/codebuddy"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/upstream/codebuddy"
 )
 
 // PoolEntry CodeBuddy 轮换池中的凭证快照。

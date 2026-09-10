@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 func setupTraeCheckinSvc(t *testing.T, respond map[string]string, paths *[]string) (TraeCheckinService, *fakeTraeRepo) {

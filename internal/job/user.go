@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/yourname/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/repository"
 )
 
 type UserJob interface {

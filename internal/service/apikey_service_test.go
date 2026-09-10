@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourname/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/model"
 )
 
 // fakeAPIKeyRepo 仅实现 API Key 相关方法，其余 GatewayRepository 方法 panic 防误用。

@@ -225,7 +225,7 @@ function retrySessionRestore(): void {
         <img class="project-icon h-9 w-9 shrink-0" :src="PROJECT_ICON_URL" alt="" />
         <div class="min-w-0">
           <div class="truncate font-display text-[15px] font-bold text-rail-text-strong">
-            CodeBuddy2API
+            Work2API
           </div>
           <div class="truncate text-xs text-rail-muted">{{ session.username }}</div>
         </div>
@@ -322,7 +322,7 @@ function retrySessionRestore(): void {
       </main>
     </div>
 
-    <CDrawer v-model:open="mobileNavOpen" placement="left" :width="244" title="CodeBuddy2API">
+    <CDrawer v-model:open="mobileNavOpen" placement="left" :width="244" title="Work2API">
       <nav class="space-y-1" aria-label="主导航">
         <button
           v-for="item in navItems"

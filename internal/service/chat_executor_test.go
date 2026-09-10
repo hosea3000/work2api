@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/yourname/work2api/internal/upstream/codebuddy"
+	"github.com/hosea3000/work2api/internal/upstream/codebuddy"
 	"strings"
 	"testing"
 )

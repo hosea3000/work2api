@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
-	"github.com/yourname/work2api/internal/upstream/codebuddy"
+	"github.com/hosea3000/work2api/internal/upstream/codebuddy"
 )
 
 // ChatExecutor 聊天执行器：选择凭证 → 构造头 → 上游流式请求 → 转换/聚合。

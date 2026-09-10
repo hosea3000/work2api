@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"github.com/yourname/work2api/pkg/log"
-	"github.com/yourname/work2api/pkg/zapgorm2"
+	"github.com/hosea3000/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/zapgorm2"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"

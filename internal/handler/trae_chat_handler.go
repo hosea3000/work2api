@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/service"
+	"github.com/hosea3000/work2api/internal/service"
 )
 
 // TraeChatHandler TRAE SOLO 的 OpenAI 兼容入口（独立端点 /trae/openai/v1/*）。

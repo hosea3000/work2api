@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 // TraeCallbackServer TRAE 登录回调监听器：独立端口（默认 18080）只服务 /authorize。

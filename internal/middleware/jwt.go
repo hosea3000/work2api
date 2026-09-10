@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/api/v1"
-	"github.com/yourname/work2api/pkg/jwt"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/api/v1"
+	"github.com/hosea3000/work2api/pkg/jwt"
+	"github.com/hosea3000/work2api/pkg/log"
 	"go.uber.org/zap"
 	"net/http"
 )

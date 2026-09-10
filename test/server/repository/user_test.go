@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/log"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

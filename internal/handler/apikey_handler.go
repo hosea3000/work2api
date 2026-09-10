@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/service"
+	"github.com/hosea3000/work2api/internal/service"
 )
 
 // APIKeyHandler 管理台 API Key 管理。

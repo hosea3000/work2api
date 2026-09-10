@@ -5,13 +5,13 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/yourname/work2api/cmd/server/wire"
-	"github.com/yourname/work2api/pkg/config"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/cmd/server/wire"
+	"github.com/hosea3000/work2api/pkg/config"
+	"github.com/hosea3000/work2api/pkg/log"
 	"go.uber.org/zap"
 )
 
-// @title           Nunu Example API
+// @title           Work2API
 // @version         1.0.0
 // @description     This is a sample server celler server.
 // @termsOfService  http://swagger.io/terms/

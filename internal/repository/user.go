@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
-	v1 "github.com/yourname/work2api/api/v1"
-	"github.com/yourname/work2api/internal/model"
+	v1 "github.com/hosea3000/work2api/api/v1"
+	"github.com/hosea3000/work2api/internal/model"
 	"gorm.io/gorm"
 )
 

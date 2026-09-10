@@ -8,7 +8,7 @@ import {
   type Router,
 } from 'vue-router';
 
-const RECOVERY_STORAGE_KEY = 'codebuddy2api:chunk-reload-attempted';
+const RECOVERY_STORAGE_KEY = 'work2api:chunk-reload-attempted';
 const RECOVERY_RECORD_VERSION = 1;
 const FALLBACK_RELOAD_STATUS_DELAY_MS = 1_000;
 const DYNAMIC_IMPORT_FETCH_ERROR_PATTERN =

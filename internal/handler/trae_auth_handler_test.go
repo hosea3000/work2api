@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/repository"
-	"github.com/yourname/work2api/internal/service"
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/service"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 // fakeTraeRepo 最小 TraeCredentialRepository 替身（内存）。

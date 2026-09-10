@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/middleware"
-	"github.com/yourname/work2api/internal/service"
+	"github.com/hosea3000/work2api/internal/middleware"
+	"github.com/hosea3000/work2api/internal/service"
 )
 
 // AuthHandler 管理台登录/会话/登出（与参考实现 /auth/* 契约一致）。

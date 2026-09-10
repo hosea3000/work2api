@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/pkg/log"
 	"google.golang.org/grpc"
 	"net"
 	"time"

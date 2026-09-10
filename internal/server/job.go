@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"github.com/yourname/work2api/internal/job"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/job"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 type JobServer struct {

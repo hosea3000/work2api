@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 func TestTraeModelsAvailable(t *testing.T) {

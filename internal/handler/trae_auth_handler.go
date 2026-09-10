@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/service"
+	"github.com/hosea3000/work2api/internal/service"
 )
 
 // TraeAuthHandler 管理台 TRAE 网页登录端点 + 公共 /authorize 回调落点。

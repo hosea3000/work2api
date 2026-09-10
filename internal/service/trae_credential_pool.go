@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/model"
 )
 
 // TraePoolEntry TRAE 轮换池条目：凭证 + 冷却截止时间（Unix 秒，0 表示不冷却）。

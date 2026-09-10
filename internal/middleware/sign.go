@@ -3,8 +3,8 @@ package middleware
 import (
 	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/gin-gonic/gin"
-	v1 "github.com/yourname/work2api/api/v1"
-	"github.com/yourname/work2api/pkg/log"
+	v1 "github.com/hosea3000/work2api/api/v1"
+	"github.com/hosea3000/work2api/pkg/log"
 	"github.com/spf13/viper"
 	"net/http"
 	"sort"

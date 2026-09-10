@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/pkg/log"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"os"

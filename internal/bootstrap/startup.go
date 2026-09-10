@@ -3,10 +3,10 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/yourname/work2api/internal/config"
-	"github.com/yourname/work2api/internal/repository"
-	"github.com/yourname/work2api/internal/service"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/config"
+	"github.com/hosea3000/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/service"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 // Startup 服务启动钩子：确保表结构、建管理员、加载两个 provider 的凭证池。

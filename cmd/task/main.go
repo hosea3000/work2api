@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/yourname/work2api/cmd/task/wire"
-	"github.com/yourname/work2api/pkg/config"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/cmd/task/wire"
+	"github.com/hosea3000/work2api/pkg/config"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/yourname/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/model"
 )
 
 // --- codebuddy 仓储 fake ---

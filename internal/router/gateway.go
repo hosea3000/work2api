@@ -2,11 +2,11 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/handler"
-	"github.com/yourname/work2api/internal/middleware"
-	"github.com/yourname/work2api/internal/service"
-	"github.com/yourname/work2api/pkg/jwt"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/handler"
+	"github.com/hosea3000/work2api/internal/middleware"
+	"github.com/hosea3000/work2api/internal/service"
+	"github.com/hosea3000/work2api/pkg/jwt"
+	"github.com/hosea3000/work2api/pkg/log"
 	"github.com/spf13/viper"
 )
 

@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	v1 "github.com/yourname/work2api/api/v1"
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/repository"
+	v1 "github.com/hosea3000/work2api/api/v1"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )

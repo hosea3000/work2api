@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/repository"
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 const providerTrae = "trae"

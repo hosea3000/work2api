@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/work2api/internal/model"
-	"github.com/yourname/work2api/internal/upstream/trae"
+	"github.com/hosea3000/work2api/internal/model"
+	"github.com/hosea3000/work2api/internal/upstream/trae"
 )
 
 // ShouldTraeRefresh TRAE 凭证刷新判定：web_login && refreshToken 非空 && 临期 24h。

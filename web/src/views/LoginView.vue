@@ -62,7 +62,7 @@ async function handleSubmit() {
       <div class="mb-6 flex items-center gap-3">
         <img class="project-icon h-12 w-12 shrink-0" :src="PROJECT_ICON_URL" alt="" />
         <div>
-          <h1 class="font-display text-2xl font-bold text-text-strong">CodeBuddy2API</h1>
+          <h1 class="font-display text-2xl font-bold text-text-strong">Work2API</h1>
           <span class="text-sm text-muted">管理台</span>
         </div>
       </div>

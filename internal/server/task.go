@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"github.com/go-co-op/gocron"
-	"github.com/yourname/work2api/internal/task"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/task"
+	"github.com/hosea3000/work2api/pkg/log"
 	"go.uber.org/zap"
 	"time"
 )

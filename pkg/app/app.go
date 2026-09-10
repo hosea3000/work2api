@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"github.com/yourname/work2api/pkg/server"
+	"github.com/hosea3000/work2api/pkg/server"
 	"log"
 	"os"
 	"os/signal"

@@ -2,7 +2,7 @@ package task
 
 import (
 	"context"
-	"github.com/yourname/work2api/internal/repository"
+	"github.com/hosea3000/work2api/internal/repository"
 )
 
 type UserTask interface {

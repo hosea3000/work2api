@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/work2api/internal/upstream/codebuddy"
+	"github.com/hosea3000/work2api/internal/upstream/codebuddy"
 )
 
 // ModelsService 模型列表：配置模型 ∪ 上游实际模型（有序去重），TTL 缓存。

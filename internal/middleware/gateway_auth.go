@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourname/work2api/internal/service"
-	"github.com/yourname/work2api/pkg/log"
+	"github.com/hosea3000/work2api/internal/service"
+	"github.com/hosea3000/work2api/pkg/log"
 )
 
 const SessionCookieName = "work2api_session"
