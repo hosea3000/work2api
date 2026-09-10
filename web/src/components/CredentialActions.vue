@@ -5,7 +5,6 @@ import {
   CalendarCheck,
   CircleCheckBig,
   MousePointerClick,
-  Pencil,
   RefreshCw,
   RotateCcw,
   Trash2,
@@ -30,8 +29,6 @@ interface Props {
   isCheckingIn?: boolean;
   checkinDisabledReason?: string;
   isRefreshingQuota?: boolean;
-  canEditQuotaProbeMode?: boolean;
-  quotaProbeModeDisabledReason?: string;
   /** trae 凭证不参与 codebuddy 调度（选择按钮禁用）；测试/签到按各自 can* 开关。 */
   isSchedulable?: boolean;
   /** 测试按钮可用（trae 凭证走 GetUserInfo 探针后开放）。 */
@@ -59,8 +56,6 @@ const props = withDefaults(defineProps<Props>(), {
   isCheckingIn: false,
   checkinDisabledReason: '',
   isRefreshingQuota: false,
-  canEditQuotaProbeMode: false,
-  quotaProbeModeDisabledReason: '',
   isSchedulable: true,
   canTest: true,
 });
@@ -72,7 +67,6 @@ const emit = defineEmits<{
   switchAccount: [credentialId: string];
   checkin: [credentialId: string];
   refreshQuota: [credentialId: string];
-  editQuotaProbeMode: [credentialId: string];
 }>();
 
 const deleteModalOpen = ref(false);
@@ -153,15 +147,6 @@ const menuItems = computed<MenuItem[]>(() => {
     disabled: actionsBlocked.value || props.credential.is_expired,
     title: props.credential.is_expired ? '凭证已过期，无法刷新额度' : undefined,
   });
-  if (props.canEditQuotaProbeMode) {
-    items.push({
-      key: 'editQuotaProbeMode',
-      label: '额度探测方式',
-      icon: Pencil,
-      disabled: actionsBlocked.value || Boolean(props.quotaProbeModeDisabledReason),
-      title: props.quotaProbeModeDisabledReason || undefined,
-    });
-  }
   items.push({
     key: 'delete',
     label: '删除凭证',
@@ -188,12 +173,6 @@ function handleMenuAction(key: string): void {
     emit('switchAccount', props.credential.credential_id);
   } else if (key === 'refreshQuota' && !props.credential.is_expired) {
     emit('refreshQuota', props.credential.credential_id);
-  } else if (
-    key === 'editQuotaProbeMode' &&
-    props.canEditQuotaProbeMode &&
-    !props.quotaProbeModeDisabledReason
-  ) {
-    emit('editQuotaProbeMode', props.credential.credential_id);
   } else if (key === 'delete') {
     deleteModalOpen.value = true;
   }

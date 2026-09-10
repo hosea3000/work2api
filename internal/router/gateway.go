@@ -87,7 +87,7 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 		admin.POST("/codebuddy/credentials/:credential_id/select", deps.CodeBuddyCredentialHandler.Select)
 		admin.POST("/codebuddy/credentials/:credential_id/test", deps.CodeBuddyCredentialHandler.Test)
 		admin.POST("/codebuddy/credentials/:credential_id/daily-checkin", deps.CodeBuddyCredentialHandler.DailyCheckin)
-		admin.GET("/codebuddy/credentials/:credential_id/quota", deps.AdminStubHandler.CredentialQuota)
+		admin.POST("/codebuddy/credentials/:credential_id/quota/refresh", deps.CodeBuddyCredentialHandler.RefreshQuota)
 
 		// TRAE 凭证
 		admin.GET("/trae/credentials", deps.TraeCredentialHandler.List)
@@ -96,6 +96,7 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 		admin.POST("/trae/credentials/:credential_id/select", deps.TraeCredentialHandler.Select)
 		admin.POST("/trae/credentials/:credential_id/test", deps.TraeCredentialHandler.Test)
 		admin.POST("/trae/credentials/:credential_id/daily-checkin", deps.TraeCredentialHandler.DailyCheckin)
+		admin.POST("/trae/credentials/:credential_id/quota/refresh", deps.TraeCredentialHandler.RefreshQuota)
 
 		// API 测试（Playground）：会话鉴权，复用聊天/模型执行器（无需 sk- key）
 		admin.GET("/playground/codebuddy/openai/v1/models", deps.OpenAIHandler.Models)

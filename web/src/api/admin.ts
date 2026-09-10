@@ -8,8 +8,6 @@ import type {
   CredentialRecord,
   CredentialProvider,
   CredentialQuota,
-  CredentialQuotaProbeMode,
-  CredentialQuotaProbeModeUpdateResponse,
   CredentialDailyCheckin,
   CredentialAccountsResponse,
   CredentialsResponse,
@@ -125,19 +123,10 @@ export const adminApi = {
       `/api/admin/${provider}/credentials/${encodeURIComponent(credentialId)}/daily-checkin`,
       { method: 'POST', timeoutMs: DAILY_CHECKIN_TIMEOUT_MS },
     ),
-  refreshCredentialQuota: (credentialId: string) =>
+  refreshCredentialQuota: (provider: CredentialProvider, credentialId: string) =>
     apiRequest<{ quota: CredentialQuota }>(
-      `/api/admin/codebuddy/credentials/${encodeURIComponent(credentialId)}/quota/refresh`,
+      `/api/admin/${provider}/credentials/${encodeURIComponent(credentialId)}/quota/refresh`,
       { method: 'POST', timeoutMs: QUOTA_PROBE_TIMEOUT_MS },
-    ),
-  updateCredentialQuotaProbeMode: (credentialId: string, mode: CredentialQuotaProbeMode) =>
-    apiRequest<CredentialQuotaProbeModeUpdateResponse>(
-      `/api/admin/codebuddy/credentials/${encodeURIComponent(credentialId)}/quota-probe-mode`,
-      {
-        method: 'PUT',
-        json: { mode },
-        timeoutMs: QUOTA_PROBE_TIMEOUT_MS,
-      },
     ),
   statsOverview: (query: StatsOverviewQuery) =>
     apiRequest<StatsOverviewResponse>(`/api/admin/stats/overview?${buildStatsSearchParams(query)}`),

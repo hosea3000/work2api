@@ -22,6 +22,7 @@ type CheckinJobServer struct {
 	traeCreds service.TraeCredentialService
 	refresh   *service.TokenRefreshService
 	trae      *service.TraeTokenRefreshService
+	quota     service.QuotaService
 }
 
 func NewCheckinJobServer(
@@ -34,8 +35,9 @@ func NewCheckinJobServer(
 	traeCreds service.TraeCredentialService,
 	refresh *service.TokenRefreshService,
 	traeRefresh *service.TraeTokenRefreshService,
+	quota service.QuotaService,
 ) *CheckinJobServer {
-	return &CheckinJobServer{log: log, job: checkinJob, conf: conf, repo: repo, sess: sess, cbCreds: cbCreds, traeCreds: traeCreds, refresh: refresh, trae: traeRefresh}
+	return &CheckinJobServer{log: log, job: checkinJob, conf: conf, repo: repo, sess: sess, cbCreds: cbCreds, traeCreds: traeCreds, refresh: refresh, trae: traeRefresh, quota: quota}
 }
 
 // Start 先执行启动钩子（建户/加载池），再并行跑签到调度与双 provider 刷新扫描。
@@ -46,6 +48,7 @@ func (s *CheckinJobServer) Start(ctx context.Context) error {
 	go s.job.Start(ctx)
 	go s.refresh.RunLoop(ctx)
 	go s.trae.RunLoop(ctx)
+	go s.quota.RunLoop(ctx)
 	<-ctx.Done()
 	return nil
 }

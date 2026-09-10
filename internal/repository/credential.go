@@ -17,6 +17,7 @@ type CodeBuddyCredentialRepository interface {
 	GetByAccountUid(ctx context.Context, accountUid string) (*model.CodeBuddyCredential, error)
 	Create(ctx context.Context, c *model.CodeBuddyCredential) error
 	Update(ctx context.Context, c *model.CodeBuddyCredential) error
+	UpdateQuota(ctx context.Context, id string, total, remaining float64) error
 	Delete(ctx context.Context, id string) error
 	GetCheckinRecord(ctx context.Context, credentialId, date string) (*model.CodeBuddyCheckinRecord, error)
 	SaveCheckinRecord(ctx context.Context, r *model.CodeBuddyCheckinRecord) error
@@ -78,6 +79,12 @@ func (r *codeBuddyCredentialRepository) Update(ctx context.Context, c *model.Cod
 	return r.DB(ctx).Save(c).Error
 }
 
+// UpdateQuota 只更新额度两列，不触碰 updated_at 与其它业务字段。
+func (r *codeBuddyCredentialRepository) UpdateQuota(ctx context.Context, id string, total, remaining float64) error {
+	return r.DB(ctx).Model(&model.CodeBuddyCredential{}).Where("id = ?", id).
+		UpdateColumns(map[string]any{"quota_total": total, "quota_remaining": remaining}).Error
+}
+
 func (r *codeBuddyCredentialRepository) Delete(ctx context.Context, id string) error {
 	return r.DB(ctx).Where("id = ?", id).Delete(&model.CodeBuddyCredential{}).Error
 }
@@ -118,6 +125,7 @@ type TraeCredentialRepository interface {
 	GetByUserId(ctx context.Context, userId string) (*model.TraeCredential, error)
 	Create(ctx context.Context, c *model.TraeCredential) error
 	Update(ctx context.Context, c *model.TraeCredential) error
+	UpdateQuota(ctx context.Context, id string, total, remaining float64) error
 	Delete(ctx context.Context, id string) error
 	GetCheckinRecord(ctx context.Context, credentialId, date string) (*model.TraeCheckinRecord, error)
 	SaveCheckinRecord(ctx context.Context, r *model.TraeCheckinRecord) error
@@ -165,6 +173,12 @@ func (r *traeCredentialRepository) Create(ctx context.Context, c *model.TraeCred
 
 func (r *traeCredentialRepository) Update(ctx context.Context, c *model.TraeCredential) error {
 	return r.DB(ctx).Save(c).Error
+}
+
+// UpdateQuota 只更新额度两列，不触碰 updated_at 与其它业务字段。
+func (r *traeCredentialRepository) UpdateQuota(ctx context.Context, id string, total, remaining float64) error {
+	return r.DB(ctx).Model(&model.TraeCredential{}).Where("id = ?", id).
+		UpdateColumns(map[string]any{"quota_total": total, "quota_remaining": remaining}).Error
 }
 
 func (r *traeCredentialRepository) Delete(ctx context.Context, id string) error {

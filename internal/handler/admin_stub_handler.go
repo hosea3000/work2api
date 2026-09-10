@@ -100,24 +100,3 @@ func (h *AdminStubHandler) StatsOverview(c *gin.Context) {
 func (h *AdminStubHandler) StatsRequests(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"requests": []any{}, "total": 0})
 }
-
-// CredentialQuota GET /api/admin/credentials/:id/quota — 对齐 CredentialQuota unknown 快照。
-func (h *AdminStubHandler) CredentialQuota(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"quota": gin.H{
-			"status":                      "unknown",
-			"quota_type":                  "personal",
-			"quota_available":             nil,
-			"total":                       nil,
-			"remaining":                   nil,
-			"remaining_percent":           nil,
-			"estimated":                   false,
-			"estimated_credit_since_sync": 0,
-			"last_attempt_at":             nil,
-			"last_success_at":             nil,
-			"last_estimated_at":           nil,
-			"error_type":                  nil,
-			"packages":                    []any{},
-		},
-	})
-}

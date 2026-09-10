@@ -13,10 +13,11 @@ type TraeCredentialHandler struct {
 	creds   service.TraeCredentialService
 	checkin service.TraeCheckinService
 	models  *service.TraeModelsService
+	quota   service.QuotaService
 }
 
-func NewTraeCredentialHandler(h *Handler, creds service.TraeCredentialService, checkin service.TraeCheckinService, models *service.TraeModelsService) *TraeCredentialHandler {
-	return &TraeCredentialHandler{Handler: h, creds: creds, checkin: checkin, models: models}
+func NewTraeCredentialHandler(h *Handler, creds service.TraeCredentialService, checkin service.TraeCheckinService, models *service.TraeModelsService, quota service.QuotaService) *TraeCredentialHandler {
+	return &TraeCredentialHandler{Handler: h, creds: creds, checkin: checkin, models: models, quota: quota}
 }
 
 func (h *TraeCredentialHandler) List(c *gin.Context) {
@@ -44,6 +45,7 @@ func (h *TraeCredentialHandler) List(c *gin.Context) {
 			"nickname":           v.Nickname,
 			"preferred_username": v.PreferredUsername,
 			"email":              v.Email,
+			"quota":              credentialQuota(v),
 		})
 	}
 	current := gin.H{"status": "no_credentials"}
@@ -110,6 +112,11 @@ func (h *TraeCredentialHandler) Test(c *gin.Context) {
 	id := c.Param("credential_id")
 	ok, statusCode, detail := h.creds.Test(c.Request.Context(), id)
 	c.JSON(http.StatusOK, gin.H{"ok": ok, "status_code": statusCode, "detail": detail})
+}
+
+// RefreshQuota POST /api/admin/trae/credentials/:credential_id/quota/refresh
+func (h *TraeCredentialHandler) RefreshQuota(c *gin.Context) {
+	refreshQuota(c, h.quota, "trae")
 }
 
 func (h *TraeCredentialHandler) DailyCheckin(c *gin.Context) {

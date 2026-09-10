@@ -34,6 +34,9 @@ type CredentialView struct {
 	Nickname          *string `json:"nickname,omitempty"`
 	PreferredUsername *string `json:"preferred_username,omitempty"`
 	Email             *string `json:"email,omitempty"`
+	// 额度探测结果（NULL = 未探测）
+	QuotaTotal     *float64 `json:"quota_total,omitempty"`
+	QuotaRemaining *float64 `json:"quota_remaining,omitempty"`
 }
 
 func codeBuddyView(c model.CodeBuddyCredential) CredentialView {
@@ -50,21 +53,25 @@ func codeBuddyView(c model.CodeBuddyCredential) CredentialView {
 		Nickname:          c.Nickname,
 		PreferredUsername: c.PreferredUsername,
 		Email:             c.Email,
+		QuotaTotal:        c.QuotaTotal,
+		QuotaRemaining:    c.QuotaRemaining,
 	}
 }
 
 func traeView(c model.TraeCredential) CredentialView {
 	return CredentialView{
-		Id:          c.Id,
-		UserId:      c.UserId,
-		TokenSuffix: tokenSuffix(c.BearerToken),
-		Status:      c.Status,
-		AuthSource:  c.AuthSource,
-		Provider:    "trae",
-		CreatedAt:   c.CreatedAt.Format(time.RFC3339),
-		ExpiresAt:   c.ExpiresAt,
-		Nickname:    c.Nickname,
-		Email:       c.Email,
+		Id:             c.Id,
+		UserId:         c.UserId,
+		TokenSuffix:    tokenSuffix(c.BearerToken),
+		Status:         c.Status,
+		AuthSource:     c.AuthSource,
+		Provider:       "trae",
+		CreatedAt:      c.CreatedAt.Format(time.RFC3339),
+		ExpiresAt:      c.ExpiresAt,
+		Nickname:       c.Nickname,
+		Email:          c.Email,
+		QuotaTotal:     c.QuotaTotal,
+		QuotaRemaining: c.QuotaRemaining,
 	}
 }
 

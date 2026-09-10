@@ -52,6 +52,7 @@ var serviceSet = wire.NewSet(
 	service.NewChatExecutor,
 	service.NewTraeChatExecutor,
 	bootstrap.NewTraeModelsServiceFromConfig,
+	service.NewQuotaService,
 )
 
 var handlerSet = wire.NewSet(

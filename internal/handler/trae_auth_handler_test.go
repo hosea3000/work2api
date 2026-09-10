@@ -63,6 +63,16 @@ func (f *fakeTraeRepo) GetCheckinRecord(context.Context, string, string) (*model
 	return nil, nil
 }
 func (f *fakeTraeRepo) SaveCheckinRecord(context.Context, *model.TraeCheckinRecord) error { return nil }
+func (f *fakeTraeRepo) UpdateQuota(_ context.Context, id string, total, remaining float64) error {
+	for i := range f.saved {
+		if f.saved[i].Id == id {
+			f.saved[i].QuotaTotal = &total
+			f.saved[i].QuotaRemaining = &remaining
+			return nil
+		}
+	}
+	return nil
+}
 
 var _ repository.TraeCredentialRepository = (*fakeTraeRepo)(nil)
 

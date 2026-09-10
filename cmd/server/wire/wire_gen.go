@@ -53,14 +53,15 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	codeBuddyCredentialService := service.NewCodeBuddyCredentialService(codeBuddyCredentialRepository, credentialPool, poolStateRepository, codeBuddyConfig, client)
 	codeBuddyCheckinService := service.NewCodeBuddyCheckinService(codeBuddyCredentialRepository, codeBuddyCredentialService, client, codeBuddyConfig)
 	modelsService := bootstrap.NewModelsServiceFromConfig(codeBuddyConfig, client, codeBuddyCredentialService)
-	codeBuddyCredentialHandler := handler.NewCodeBuddyCredentialHandler(handlerHandler, codeBuddyCredentialService, codeBuddyCheckinService, modelsService)
 	traeCredentialRepository := repository.NewTraeCredentialRepository(repositoryRepository)
-	traeCredentialPool := service.NewTraeCredentialPool()
 	traeClient := bootstrap.NewTraeClient()
+	quotaService := service.NewQuotaService(codeBuddyCredentialRepository, traeCredentialRepository, client, traeClient)
+	codeBuddyCredentialHandler := handler.NewCodeBuddyCredentialHandler(handlerHandler, codeBuddyCredentialService, codeBuddyCheckinService, modelsService, quotaService)
+	traeCredentialPool := service.NewTraeCredentialPool()
 	traeCredentialService := service.NewTraeCredentialService(traeCredentialRepository, traeCredentialPool, poolStateRepository, traeClient)
 	traeCheckinService := service.NewTraeCheckinService(traeCredentialRepository, traeCredentialService, traeClient, codeBuddyConfig)
 	traeModelsService := bootstrap.NewTraeModelsServiceFromConfig(codeBuddyConfig, traeClient, traeCredentialService)
-	traeCredentialHandler := handler.NewTraeCredentialHandler(handlerHandler, traeCredentialService, traeCheckinService, traeModelsService)
+	traeCredentialHandler := handler.NewTraeCredentialHandler(handlerHandler, traeCredentialService, traeCheckinService, traeModelsService, quotaService)
 	requestPolicies := bootstrap.NewRequestPolicies(codeBuddyConfig)
 	chatExecutor := service.NewChatExecutor(codeBuddyCredentialService, client, requestPolicies)
 	openAIHandler := handler.NewOpenAIHandler(handlerHandler, chatExecutor, modelsService)
@@ -96,7 +97,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	checkinJob := job.NewCheckinJob(codeBuddyCheckinService, traeCheckinService, codeBuddyConfig)
 	tokenRefreshService := service.NewTokenRefreshService(codeBuddyCredentialService, client)
 	traeTokenRefreshService := service.NewTraeTokenRefreshService(traeCredentialService, traeClient)
-	checkinJobServer := server.NewCheckinJobServer(logger, checkinJob, codeBuddyConfig, gatewayRepository, sessionService, codeBuddyCredentialService, traeCredentialService, tokenRefreshService, traeTokenRefreshService)
+	checkinJobServer := server.NewCheckinJobServer(logger, checkinJob, codeBuddyConfig, gatewayRepository, sessionService, codeBuddyCredentialService, traeCredentialService, tokenRefreshService, traeTokenRefreshService, quotaService)
 	traeCallbackServer := server.NewTraeCallbackServerFromDeps(routerDeps, traeAuthHandler)
 	appApp := newApp(httpServer, jobServer, checkinJobServer, traeCallbackServer)
 	return appApp, func() {
@@ -107,7 +108,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewGatewayRepository, repository.NewCodeBuddyCredentialRepository, repository.NewTraeCredentialRepository, repository.NewPoolStateRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewUserService, config.LoadCodeBuddyConfig, bootstrap.NewCodeBuddyClient, bootstrap.NewRequestPolicies, bootstrap.NewModelsServiceFromConfig, service.NewCredentialPool, service.NewTraeCredentialPool, service.NewCodeBuddyCredentialService, service.NewTraeCredentialService, service.NewCodeBuddyCheckinService, service.NewTraeCheckinService, service.NewAPIKeyService, service.NewSessionService, service.NewChatExecutor, service.NewTraeChatExecutor, bootstrap.NewTraeModelsServiceFromConfig)
+var serviceSet = wire.NewSet(service.NewService, service.NewUserService, config.LoadCodeBuddyConfig, bootstrap.NewCodeBuddyClient, bootstrap.NewRequestPolicies, bootstrap.NewModelsServiceFromConfig, service.NewCredentialPool, service.NewTraeCredentialPool, service.NewCodeBuddyCredentialService, service.NewTraeCredentialService, service.NewCodeBuddyCheckinService, service.NewTraeCheckinService, service.NewAPIKeyService, service.NewSessionService, service.NewChatExecutor, service.NewTraeChatExecutor, bootstrap.NewTraeModelsServiceFromConfig, service.NewQuotaService)
 
 var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewAuthHandler, handler.NewAPIKeyHandler, handler.NewCodeBuddyCredentialHandler, handler.NewTraeCredentialHandler, handler.NewOpenAIHandler, handler.NewAdminStubHandler, handler.NewCodeBuddyAuthHandler, handler.NewTraeAuthHandler, handler.NewTraeChatHandler, service.NewAuthStateStore, service.NewOAuthService, service.NewTokenRefreshService, service.NewTraeTokenRefreshService, service.NewTraeLoginService, bootstrap.NewTraeClient)
 

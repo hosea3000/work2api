@@ -244,8 +244,6 @@ export interface CredentialRecord {
   scope?: string;
   domain?: string;
   enterprise_id?: string;
-  /** 仅用于手动凭证的额度探测，不属于真实 CodeBuddy 账号上下文。 */
-  quota_probe_mode?: CredentialQuotaProbeMode;
   enterprise_name?: string;
   department_full_name?: string;
   account_type?: string;
@@ -253,11 +251,10 @@ export interface CredentialRecord {
   account_count?: number;
   auth_source?: 'oauth' | 'manual' | 'unknown' | 'web_login';
   provider?: 'codebuddy' | 'trae';
-  can_edit_quota_probe_mode?: boolean;
   has_refresh_token: boolean;
   has_token: boolean;
   token_display: string;
-  quota?: CredentialQuota;
+  quota?: CredentialQuota | null;
   daily_checkin?: CredentialDailyCheckin;
 }
 
@@ -273,32 +270,10 @@ export interface CredentialDailyCheckin {
 
 export type CredentialProvider = 'codebuddy' | 'trae';
 
-export type CredentialQuotaStatus = 'unknown' | 'fresh' | 'stale' | 'error';
-export type CredentialQuotaProbeMode = 'personal' | 'enterprise';
-
-export interface CredentialQuotaPackage {
-  name: string;
+/** 额度快照：仅总额与剩余；未探测为 null。 */
+export interface CredentialQuota {
   total: number;
   remaining: number;
-  used: number;
-  cycle_start: string | null;
-  cycle_end: string | null;
-}
-
-export interface CredentialQuota {
-  status: CredentialQuotaStatus;
-  quota_type: 'personal' | 'enterprise';
-  quota_available: boolean | null;
-  total: number | null;
-  remaining: number | null;
-  remaining_percent: number | null;
-  estimated: boolean;
-  estimated_credit_since_sync: number;
-  last_attempt_at: number | null;
-  last_success_at: number | null;
-  last_estimated_at: number | null;
-  error_type: string | null;
-  packages: CredentialQuotaPackage[];
 }
 
 export interface CredentialAccount {
@@ -320,11 +295,6 @@ export interface CredentialsResponse {
   credentials: CredentialRecord[];
   current: CurrentCredential;
   auto_rotation_enabled?: boolean;
-}
-
-export interface CredentialQuotaProbeModeUpdateResponse {
-  credential: CredentialRecord;
-  quota_refresh_succeeded: boolean;
 }
 
 /** 后端返回的动态设置字段；新增 type 时需同步 SettingsView 的控件分支。 */

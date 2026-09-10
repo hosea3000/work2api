@@ -14,10 +14,11 @@ type CodeBuddyCredentialHandler struct {
 	creds   service.CodeBuddyCredentialService
 	checkin service.CodeBuddyCheckinService
 	models  *service.ModelsService
+	quota   service.QuotaService
 }
 
-func NewCodeBuddyCredentialHandler(h *Handler, creds service.CodeBuddyCredentialService, checkin service.CodeBuddyCheckinService, models *service.ModelsService) *CodeBuddyCredentialHandler {
-	return &CodeBuddyCredentialHandler{Handler: h, creds: creds, checkin: checkin, models: models}
+func NewCodeBuddyCredentialHandler(h *Handler, creds service.CodeBuddyCredentialService, checkin service.CodeBuddyCheckinService, models *service.ModelsService, quota service.QuotaService) *CodeBuddyCredentialHandler {
+	return &CodeBuddyCredentialHandler{Handler: h, creds: creds, checkin: checkin, models: models, quota: quota}
 }
 
 func (h *CodeBuddyCredentialHandler) List(c *gin.Context) {
@@ -45,6 +46,7 @@ func (h *CodeBuddyCredentialHandler) List(c *gin.Context) {
 			"nickname":           v.Nickname,
 			"preferred_username": v.PreferredUsername,
 			"email":              v.Email,
+			"quota":              credentialQuota(v),
 		})
 	}
 	current := gin.H{"status": "no_credentials"}
@@ -147,6 +149,36 @@ func (h *CodeBuddyCredentialHandler) Test(c *gin.Context) {
 	id := c.Param("credential_id")
 	ok, statusCode, detail := h.creds.Test(c.Request.Context(), id)
 	c.JSON(http.StatusOK, gin.H{"ok": ok, "status_code": statusCode, "detail": detail})
+}
+
+// RefreshQuota POST /api/admin/codebuddy/credentials/:credential_id/quota/refresh
+func (h *CodeBuddyCredentialHandler) RefreshQuota(c *gin.Context) {
+	refreshQuota(c, h.quota, "codebuddy")
+}
+
+// credentialQuota 把凭证视图的额度两列转成前端 {total, remaining}；未探测为 nil。
+func credentialQuota(v service.CredentialView) any {
+	if v.QuotaTotal == nil || v.QuotaRemaining == nil {
+		return nil
+	}
+	return gin.H{"total": *v.QuotaTotal, "remaining": *v.QuotaRemaining}
+}
+
+// refreshQuota 两 provider 共用的额度刷新响应：成功 {quota}，未找到 404，跳过 409，其余 502。
+func refreshQuota(c *gin.Context, svc service.QuotaService, provider string) {
+	quota, err := svc.Refresh(c.Request.Context(), provider, c.Param("credential_id"))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrCredentialNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"detail": "credential not found"})
+		case errors.Is(err, service.ErrQuotaSkipped):
+			c.JSON(http.StatusConflict, gin.H{"detail": "该凭证不支持个人额度探测"})
+		default:
+			c.JSON(http.StatusBadGateway, gin.H{"detail": "额度刷新失败"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"quota": gin.H{"total": quota.Total, "remaining": quota.Remaining}})
 }
 
 func (h *CodeBuddyCredentialHandler) DailyCheckin(c *gin.Context) {

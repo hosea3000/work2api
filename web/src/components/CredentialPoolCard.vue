@@ -27,6 +27,7 @@ const toast = useToast();
 
 const testingIds = reactive(new Set<string>());
 const checkingInIds = reactive(new Set<string>());
+const refreshingQuotaIds = reactive(new Set<string>());
 const selectingId = ref<string | null>(null);
 const deletingId = ref<string | null>(null);
 
@@ -150,6 +151,28 @@ const toggleRotationMutation = useMutation({
   },
 });
 
+const refreshQuotaMutation = useMutation({
+  mutationFn: (credentialId: string) =>
+    adminApi.refreshCredentialQuota(props.provider, credentialId),
+  onMutate: (credentialId: string) => {
+    refreshingQuotaIds.add(credentialId);
+  },
+  onSuccess: (result) => {
+    toast.success(`额度已刷新：剩余 ${formatQuota(result.quota.remaining)} / ${formatQuota(result.quota.total)}`);
+  },
+  onError: (error) => {
+    toast.error(`刷新额度失败：${error instanceof Error ? error.message : '未知错误'}`);
+  },
+  onSettled: async (_d, _e, credentialId) => {
+    refreshingQuotaIds.delete(credentialId);
+    await invalidate();
+  },
+});
+
+function formatQuota(value: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
+}
+
 const hasActiveTests = computed(() => testingIds.size > 0);
 const writeInProgress = computed(
   () => selectMutation.isPending.value || deleteMutation.isPending.value,
@@ -173,12 +196,20 @@ const columns: Column<CredentialRecord>[] = [
   {
     title: '用户',
     key: 'email',
-    minWidth: 200,
+    minWidth: 320,
     render: (row) =>
       row.nickname || row.preferred_username || row.email || row.user_id || '-',
   },
-  { title: 'Token', key: 'token_display', minWidth: 160, className: 'mono' },
-  { title: '剩余', key: 'time_remaining_str', width: 110 },
+  { title: 'Token', key: 'token_display', minWidth: 200, className: 'mono' },
+  {
+    title: '额度',
+    key: 'quota',
+    minWidth: 240,
+    render: (row) =>
+      row.quota
+        ? `剩余 ${formatQuota(row.quota.remaining)} / ${formatQuota(row.quota.total)}`
+        : '-',
+  },
   {
     title: '操作',
     key: 'actions',
@@ -197,11 +228,13 @@ const columns: Column<CredentialRecord>[] = [
         canTest: true,
         canCheckIn: !row.is_expired,
         isCheckingIn: checkingInIds.has(row.credential_id),
+        isRefreshingQuota: refreshingQuotaIds.has(row.credential_id),
         checkinDisabledReason: row.is_expired ? '凭证已过期，无法签到' : undefined,
         onSelect: (id: string) => selectMutation.mutate(id),
         onTest: (id: string) => testMutation.mutate(id),
         onDelete: (id: string) => deleteMutation.mutate(id),
         onCheckin: (id: string) => checkinMutation.mutate(id),
+        onRefreshQuota: (id: string) => refreshQuotaMutation.mutate(id),
       }),
   },
 ];

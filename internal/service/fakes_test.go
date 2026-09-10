@@ -67,6 +67,17 @@ func (f *fakeCbRepo) Delete(_ context.Context, id string) error {
 	return nil
 }
 
+func (f *fakeCbRepo) UpdateQuota(_ context.Context, id string, total, remaining float64) error {
+	for i := range f.saved {
+		if f.saved[i].Id == id {
+			f.saved[i].QuotaTotal = &total
+			f.saved[i].QuotaRemaining = &remaining
+			return nil
+		}
+	}
+	return nil
+}
+
 func (f *fakeCbRepo) GetCheckinRecord(_ context.Context, credId, date string) (*model.CodeBuddyCheckinRecord, error) {
 	for i := range f.records {
 		if f.records[i].CredentialId == credId && f.records[i].CheckinDate == date {
@@ -127,6 +138,17 @@ func (f *fakeTraeRepo) Delete(_ context.Context, id string) error {
 	for i := range f.saved {
 		if f.saved[i].Id == id {
 			f.saved = append(f.saved[:i], f.saved[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (f *fakeTraeRepo) UpdateQuota(_ context.Context, id string, total, remaining float64) error {
+	for i := range f.saved {
+		if f.saved[i].Id == id {
+			f.saved[i].QuotaTotal = &total
+			f.saved[i].QuotaRemaining = &remaining
 			return nil
 		}
 	}

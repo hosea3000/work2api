@@ -25,28 +25,34 @@ type CodeBuddyCredential struct {
 	Nickname          *string `gorm:"size:255"`
 	PreferredUsername *string `gorm:"size:255"`
 	Email             *string `gorm:"size:255"`
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	// 额度探测结果（NULL = 未探测）
+	QuotaTotal     *float64
+	QuotaRemaining *float64
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (CodeBuddyCredential) TableName() string { return "codebuddy_credential" }
 
 // TraeCredential TRAE SOLO 凭证。与 CodeBuddyCredential 物理分表，互不引用。
 type TraeCredential struct {
-	Id           string  `gorm:"primaryKey;size:36"`
-	BearerToken  string  `gorm:"type:text;not null"`
-	UserId       string  `gorm:"index;size:128;not null"`
-	MachineID    *string `gorm:"size:64"`
-	DeviceID     *string `gorm:"size:64"`
-	AuthSource   string  `gorm:"size:16;not null;default:web_login"` // web_login
-	Status       string  `gorm:"size:16;not null;default:active;index"`
-	ExpiresAt    *int64
-	RefreshToken *string `gorm:"type:text"`
+	Id            string  `gorm:"primaryKey;size:36"`
+	BearerToken   string  `gorm:"type:text;not null"`
+	UserId        string  `gorm:"index;size:128;not null"`
+	MachineID     *string `gorm:"size:64"`
+	DeviceID      *string `gorm:"size:64"`
+	AuthSource    string  `gorm:"size:16;not null;default:web_login"` // web_login
+	Status        string  `gorm:"size:16;not null;default:active;index"`
+	ExpiresAt     *int64
+	RefreshToken  *string `gorm:"type:text"`
 	LastRefreshAt *int64
-	Nickname     *string `gorm:"size:255"`
-	Email        *string `gorm:"size:255"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	Nickname      *string `gorm:"size:255"`
+	Email         *string `gorm:"size:255"`
+	// 额度探测结果（NULL = 未探测）
+	QuotaTotal     *float64
+	QuotaRemaining *float64
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (TraeCredential) TableName() string { return "trae_credential" }
