@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -34,6 +35,7 @@ func (h *APIKeyHandler) List(c *gin.Context) {
 		records = append(records, gin.H{
 			"id":           k.Id,
 			"name":         k.Name,
+			"key":          k.Key,
 			"preview":      k.KeySuffix,
 			"created_at":   created,
 			"last_used_at": nil,
@@ -52,6 +54,14 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 	}
 	result, err := h.apiKeys.Create(c.Request.Context(), req.Name)
 	if err != nil {
+		if errors.Is(err, service.ErrDuplicateName) {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": "名称已存在"})
+			return
+		}
+		if errors.Is(err, service.ErrEmptyName) {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": "名称不能为空"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "create api key failed"})
 		return
 	}

@@ -15,10 +15,11 @@ type AdminUser struct {
 
 func (AdminUser) TableName() string { return "admin_user" }
 
-// APIKey sk- 密钥；仅存 SHA-256 哈希。
+// APIKey sk- 密钥；明文持久化（可随时取回），key_hash 作为校验索引。
 type APIKey struct {
 	Id        string `gorm:"primaryKey;size:36"`
 	Name      string `gorm:"size:128;not null"`
+	Key       string `gorm:"type:text"`
 	KeyHash   string `gorm:"uniqueIndex;size:64;not null"`
 	KeySuffix string `gorm:"size:16;not null"`
 	Disabled  bool   `gorm:"not null;default:false"`

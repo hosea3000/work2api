@@ -8,8 +8,7 @@ export function adminQueryKeys(username: string) {
     credentials: (provider: string) => [...root, 'credentials', provider] as const,
     apiKeys: [...root, 'api-keys'] as const,
     settings: [...root, 'settings'] as const,
-    playgroundModels: (protocol: 'openai' | 'anthropic') =>
-      [...root, 'playground', protocol, 'models'] as const,
+    playgroundModels: (provider: string) => [...root, 'playground', provider, 'models'] as const,
     statsOverview: (params: unknown) => [...root, 'stats', 'overview', params] as const,
     statsRequests: (params: unknown) => [...root, 'stats', 'requests', params] as const,
     statsDimension: (dimension: string, params: unknown) =>

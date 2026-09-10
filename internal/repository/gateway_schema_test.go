@@ -43,4 +43,11 @@ func TestEnsureSchemaOnFreshDB(t *testing.T) {
 	if old != 0 {
 		t.Errorf("legacy credential table should not exist")
 	}
+
+	// api_key 名称唯一索引（不区分大小写）存在
+	var idx int64
+	_ = db.Raw("SELECT count(*) FROM sqlite_master WHERE type='index' AND name = 'idx_api_key_name'").Scan(&idx).Error
+	if idx != 1 {
+		t.Errorf("unique index idx_api_key_name missing")
+	}
 }

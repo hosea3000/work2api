@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +13,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/yourname/work2api/internal/model"
 	"github.com/yourname/work2api/internal/repository"
+)
+
+// API Key 名称校验错误。
+var (
+	ErrEmptyName     = errors.New("api key name is empty")
+	ErrDuplicateName = errors.New("api key name already exists")
 )
 
 // APIKeyService sk- API Key 管理与校验。
@@ -37,10 +44,11 @@ type APIKeyCreateResult struct {
 	Key  string `json:"key"`
 }
 
-// APIKeyView 列表视图（脱敏）。
+// APIKeyView 列表视图（含明文 key，前端隐藏显示）。
 type APIKeyView struct {
 	Id        string `json:"id"`
 	Name      string `json:"name"`
+	Key       string `json:"key"`
 	KeySuffix string `json:"key_suffix"`
 	Disabled  bool   `json:"disabled"`
 	CreatedAt string `json:"created_at"`
@@ -49,7 +57,14 @@ type APIKeyView struct {
 func (s *apiKeyService) Create(ctx context.Context, name string) (*APIKeyCreateResult, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		name = "unnamed"
+		return nil, ErrEmptyName
+	}
+	existing, err := s.repo.GetAPIKeyByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, ErrDuplicateName
 	}
 	raw, err := generateAPIKey()
 	if err != nil {
@@ -59,10 +74,15 @@ func (s *apiKeyService) Create(ctx context.Context, name string) (*APIKeyCreateR
 	rec := &model.APIKey{
 		Id:        uuid.NewString(),
 		Name:      name,
+		Key:       raw,
 		KeyHash:   hex.EncodeToString(sum[:]),
 		KeySuffix: "..." + raw[len(raw)-4:],
 	}
 	if err := s.repo.CreateAPIKey(ctx, rec); err != nil {
+		// 兜底：并发下 DB 唯一索引冲突也归为重复名
+		if strings.Contains(strings.ToUpper(err.Error()), "UNIQUE") {
+			return nil, ErrDuplicateName
+		}
 		return nil, err
 	}
 	return &APIKeyCreateResult{Id: rec.Id, Name: rec.Name, Key: raw}, nil
@@ -78,6 +98,7 @@ func (s *apiKeyService) List(ctx context.Context) ([]APIKeyView, error) {
 		out = append(out, APIKeyView{
 			Id:        k.Id,
 			Name:      k.Name,
+			Key:       k.Key,
 			KeySuffix: k.KeySuffix,
 			Disabled:  k.Disabled,
 			CreatedAt: k.CreatedAt.Format(time.RFC3339),

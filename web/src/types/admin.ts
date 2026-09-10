@@ -216,12 +216,13 @@ export interface StatsRequestsResponse {
 export interface ApiKeyRecord {
   id: string;
   name: string;
+  key: string;
   preview: string;
   created_at: number;
   last_used_at: number | null;
 }
 
-/** `api_key` 只在创建响应中返回一次，不会出现在列表接口。 */
+/** `api_key` 为明文 key（持久化，可随时复制）。 */
 export interface ApiKeyCreateResponse extends ApiKeyRecord {
   api_key: string;
 }

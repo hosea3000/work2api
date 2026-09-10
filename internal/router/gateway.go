@@ -97,6 +97,12 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 		admin.POST("/trae/credentials/:credential_id/test", deps.TraeCredentialHandler.Test)
 		admin.POST("/trae/credentials/:credential_id/daily-checkin", deps.TraeCredentialHandler.DailyCheckin)
 
+		// API 测试（Playground）：会话鉴权，复用聊天/模型执行器（无需 sk- key）
+		admin.GET("/playground/codebuddy/openai/v1/models", deps.OpenAIHandler.Models)
+		admin.POST("/playground/codebuddy/openai/v1/chat/completions", deps.OpenAIHandler.ChatCompletions)
+		admin.GET("/playground/trae/openai/v1/models", deps.TraeChatHandler.Models)
+		admin.POST("/playground/trae/openai/v1/chat/completions", deps.TraeChatHandler.ChatCompletions)
+
 		// 统计（打桩）
 		admin.GET("/stats/overview", deps.AdminStubHandler.StatsOverview)
 		admin.GET("/stats/requests", deps.AdminStubHandler.StatsRequests)

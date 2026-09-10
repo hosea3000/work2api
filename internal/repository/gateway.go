@@ -21,6 +21,7 @@ type GatewayRepository interface {
 	ListAPIKeys(ctx context.Context) ([]model.APIKey, error)
 	GetAPIKeyByID(ctx context.Context, id string) (*model.APIKey, error)
 	GetAPIKeyByHash(ctx context.Context, hash string) (*model.APIKey, error)
+	GetAPIKeyByName(ctx context.Context, name string) (*model.APIKey, error)
 	CreateAPIKey(ctx context.Context, k *model.APIKey) error
 	DeleteAPIKey(ctx context.Context, id string) error
 }
@@ -58,7 +59,7 @@ func (r *gatewayRepository) CreateAdmin(ctx context.Context, u *model.AdminUser)
 // EnsureSchema 确保全部表存在（服务启动自愈：DB 文件被删/全新部署无需先跑 cmd/migration）。
 // AutoMigrate 幂等：存量库仅补缺失的表与列，不破坏已有数据。
 func (r *gatewayRepository) EnsureSchema(ctx context.Context) error {
-	return r.DB(ctx).AutoMigrate(
+	if err := r.DB(ctx).AutoMigrate(
 		&model.User{},
 		&model.AdminUser{},
 		&model.APIKey{},
@@ -67,7 +68,13 @@ func (r *gatewayRepository) EnsureSchema(ctx context.Context) error {
 		&model.CodeBuddyCheckinRecord{},
 		&model.TraeCheckinRecord{},
 		&model.PoolState{},
-	)
+	); err != nil {
+		return err
+	}
+	// API Key 名称唯一（不区分大小写）
+	return r.DB(ctx).Exec(
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_api_key_name ON api_key(name COLLATE NOCASE)",
+	).Error
 }
 
 func (r *gatewayRepository) ListAPIKeys(ctx context.Context) ([]model.APIKey, error) {
@@ -91,6 +98,18 @@ func (r *gatewayRepository) GetAPIKeyByID(ctx context.Context, id string) (*mode
 func (r *gatewayRepository) GetAPIKeyByHash(ctx context.Context, hash string) (*model.APIKey, error) {
 	var k model.APIKey
 	err := r.DB(ctx).Where("key_hash = ?", hash).First(&k).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &k, nil
+}
+
+func (r *gatewayRepository) GetAPIKeyByName(ctx context.Context, name string) (*model.APIKey, error) {
+	var k model.APIKey
+	err := r.DB(ctx).Where("name = ? COLLATE NOCASE", name).First(&k).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

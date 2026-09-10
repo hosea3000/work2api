@@ -3,8 +3,8 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { Play, Square } from '@lucide/vue';
 import { ApiError } from '../api/client';
-import { anthropicPlaygroundApi, openaiPlaygroundApi } from '../api/admin';
-import type { AnthropicMessageRequest, ChatCompletionRequest } from '../types';
+import { openaiPlaygroundApi } from '../api/admin';
+import type { ChatCompletionRequest } from '../types';
 import { SseStreamDecoder } from '../utils/sse';
 import { useToast } from '../composables/useToast';
 import CCard from '../components/ui/CCard.vue';
@@ -24,8 +24,8 @@ import { adminQueryKeys } from '../utils/adminQueryKeys';
 const toast = useToast();
 const session = useSessionStore();
 const queryKeys = adminQueryKeys(session.username);
-type PlaygroundProtocol = 'openai' | 'anthropic';
-const protocol = ref<PlaygroundProtocol>('openai');
+type PlaygroundProvider = 'codebuddy' | 'trae';
+const provider = ref<PlaygroundProvider>('codebuddy');
 const selectedModel = ref('');
 const prompt = ref('Hello, what is 2+2?');
 const stream = ref(false);
@@ -73,11 +73,8 @@ function resetStreamOutput(): void {
 }
 
 const modelsQuery = useQuery({
-  queryKey: computed(() => queryKeys.playgroundModels(protocol.value)),
-  queryFn: ({ queryKey, signal }) =>
-    queryKey[3] === 'openai'
-      ? openaiPlaygroundApi.models(signal)
-      : anthropicPlaygroundApi.models(signal),
+  queryKey: computed(() => queryKeys.playgroundModels(provider.value)),
+  queryFn: ({ signal }) => openaiPlaygroundApi.models(provider.value, signal),
 });
 
 const modelOptions = computed(() =>
@@ -94,7 +91,7 @@ function abortInFlight(): void {
   }
 }
 
-watch(protocol, () => {
+watch(provider, () => {
   abortInFlight();
   resetStreamOutput();
   selectedModel.value = '';
@@ -114,36 +111,18 @@ async function doSend(): Promise<void> {
   resetStreamOutput();
 
   const requestStream = stream.value;
-  const requestProtocol = protocol.value;
-  const model =
-    selectedModel.value ||
-    modelOptions.value[0]?.value ||
-    (requestProtocol === 'openai' ? 'glm-5.2' : 'anthropic/codebuddy/glm-5.2');
+  const requestProvider = provider.value;
+  const model = selectedModel.value || modelOptions.value[0]?.value || 'glm-5.2';
   const controller = new AbortController();
   abortController.value = controller;
 
   try {
     const messages = [{ role: 'user' as const, content: prompt.value }];
-    const response =
-      requestProtocol === 'openai'
-        ? await openaiPlaygroundApi.chat(
-            {
-              model,
-              messages,
-              stream: requestStream,
-            } satisfies ChatCompletionRequest,
-            controller.signal,
-          )
-        : await anthropicPlaygroundApi.chat(
-            {
-              model,
-              max_tokens: 1024,
-              system: 'You are a helpful assistant.',
-              messages,
-              stream: requestStream,
-            } satisfies AnthropicMessageRequest,
-            controller.signal,
-          );
+    const response = await openaiPlaygroundApi.chat(
+      requestProvider,
+      { model, messages, stream: requestStream } satisfies ChatCompletionRequest,
+      controller.signal,
+    );
 
     if (!response.ok) {
       output.value = await response.text();
@@ -176,30 +155,19 @@ async function doSend(): Promise<void> {
         for (const result of results) {
           if (result.type === 'error') throw new Error(result.message);
           if (result.type === 'done') {
-            if (requestProtocol === 'openai') {
-              doneReceived = true;
-              break readLoop;
-            }
-            continue;
+            doneReceived = true;
+            break readLoop;
           }
           queueStreamOutput(
             result.event ? { event: result.event, data: result.data } : result.data,
           );
-          if (requestProtocol === 'anthropic' && result.event === 'message_stop') {
-            doneReceived = true;
-            break readLoop;
-          }
         }
 
         if (done) break;
       }
 
       if (!doneReceived) {
-        throw new Error(
-          requestProtocol === 'openai'
-            ? '流式响应在 [DONE] 之前结束'
-            : '流式响应在 message_stop 之前结束',
-        );
+        throw new Error('流式响应在 [DONE] 之前结束');
       }
       flushStreamOutput();
       toast.success('流式请求完成');
@@ -216,7 +184,7 @@ async function doSend(): Promise<void> {
   } catch (error) {
     flushStreamOutput();
     if (controller.signal.aborted) {
-      if (protocol.value !== requestProtocol) return;
+      if (provider.value !== requestProvider) return;
       // 用户主动取消，不算错误
       output.value = '已取消';
       toast.info('请求已取消');
@@ -262,9 +230,9 @@ onBeforeUnmount(() => {
     <CCard title="请求">
       <CForm ref="consoleFormRef" :model="consoleForm" :rules="consoleRules" label-placement="top">
         <div class="flex flex-col gap-4">
-          <CRadioGroup v-model="protocol" class="self-start" aria-label="协议">
-            <CRadioButton value="openai">OpenAI</CRadioButton>
-            <CRadioButton value="anthropic">Anthropic</CRadioButton>
+          <CRadioGroup v-model="provider" class="self-start" aria-label="Provider">
+            <CRadioButton value="codebuddy">CodeBuddy</CRadioButton>
+            <CRadioButton value="trae">TRAE</CRadioButton>
           </CRadioGroup>
           <div class="console-model-row flex items-center gap-2">
             <CSelect

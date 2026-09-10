@@ -4,15 +4,23 @@
 TBD - created by archiving change bootstrap-codebuddy-gateway-core. Update Purpose after archive.
 ## Requirements
 ### Requirement: API Key 生成与存储
-系统 SHALL 提供 `sk-` 前缀 API Key 的生成：明文仅在创建响应中返回一次，数据库只存 key 的 SHA-256 哈希、名称、创建时间与启用状态。
+系统 SHALL 提供 `sk-` 前缀 API Key 的生成与存储：明文 key SHALL 持久化保存（可随时取回），同时保留 SHA-256 哈希作为校验索引。名称 MUST 非空且全局唯一（不区分大小写）。
 
 #### Scenario: 创建 API Key
-- **WHEN** 已登录管理员调用 `POST /api/admin/api-keys` 并提供名称
-- **THEN** 响应返回完整明文 key（`sk-...`），数据库记录为哈希值，明文不可再次获取
+- **WHEN** 已登录管理员调用 `POST /api/admin/api-keys` 并提供非空且未占用的名称
+- **THEN** 响应返回完整明文 key（`sk-...`），数据库同时保存明文与哈希
 
-#### Scenario: 明文仅展示一次
+#### Scenario: 名称重复被拒绝
+- **WHEN** 管理员用已存在的名称（含仅大小写不同，如 `Prod` vs `prod`）创建
+- **THEN** 返回 400，不创建新 key
+
+#### Scenario: 名称为空被拒绝
+- **WHEN** 管理员提交空名称或仅空白字符
+- **THEN** 返回 400，不创建新 key
+
+#### Scenario: 列表返回明文 key
 - **WHEN** 管理员调用 `GET /api/admin/api-keys`
-- **THEN** 列表仅含 key 尾部摘要（如 `...abcd`）、名称与元数据，不含明文
+- **THEN** 每条记录含完整明文 `key`（前端以掩码显示，供随时复制）
 
 ### Requirement: API Key 校验中间件
 外部 API 端点（`/codebuddy/openai/v1/*` 与 `/trae/openai/v1/*`）MUST 通过 Bearer Token 提取 API Key，SHA-256 哈希后在数据库比对；不存在、已禁用或格式不符一律 401。

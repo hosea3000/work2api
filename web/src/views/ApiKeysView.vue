@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue';
-import { onBeforeRouteLeave } from 'vue-router';
+import { computed, h, ref } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { Copy, Plus, Trash2 } from '@lucide/vue';
 import CAlert from '../components/ui/CAlert.vue';
@@ -12,7 +11,7 @@ import CInputGroup from '../components/ui/CInputGroup.vue';
 import CPopconfirm from '../components/ui/CPopconfirm.vue';
 import CTooltip from '../components/ui/CTooltip.vue';
 import { adminApi } from '../api/admin';
-import type { ApiKeyCreateResponse, ApiKeyRecord } from '../types';
+import type { ApiKeyRecord } from '../types';
 import { useClipboard } from '../composables/useClipboard';
 import { useToast } from '../composables/useToast';
 import RefreshButton from '../components/RefreshButton.vue';
@@ -29,52 +28,6 @@ const name = ref('');
 const MAX_API_KEY_NAME_LENGTH = 80;
 const nameLength = computed(() => name.value.length);
 const actionButtonClass = 'table-action-button';
-const leaveWarning = '仍有未保存的 API Key，离开后将无法再次查看。确定要离开吗？';
-
-interface PendingApiKey {
-  id: string;
-  name: string;
-  apiKey: string;
-  copyFailed: boolean;
-  justCreated: boolean;
-}
-
-const pendingApiKeys = ref<PendingApiKey[]>([]);
-
-function addPendingApiKey(created: ApiKeyCreateResponse): void {
-  pendingApiKeys.value.push({
-    id: created.id,
-    name: created.name,
-    apiKey: created.api_key,
-    copyFailed: false,
-    justCreated: true,
-  });
-  const pendingKey = pendingApiKeys.value[pendingApiKeys.value.length - 1];
-  window.setTimeout(() => {
-    pendingKey.justCreated = false;
-  }, 600);
-}
-
-function confirmLeavingWithPendingKeys(): boolean {
-  if (pendingApiKeys.value.length === 0) return true;
-  return window.confirm(leaveWarning);
-}
-
-function handleBeforeUnload(event: BeforeUnloadEvent): void {
-  if (pendingApiKeys.value.length === 0) return;
-  event.preventDefault();
-  event.returnValue = leaveWarning;
-}
-
-onBeforeRouteLeave(confirmLeavingWithPendingKeys);
-
-onMounted(() => {
-  window.addEventListener('beforeunload', handleBeforeUnload);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload);
-});
 
 const apiKeysQuery = useQuery({
   queryKey: queryKeys.apiKeys,
@@ -93,20 +46,26 @@ function formatMinuteTimestamp(value: number): string {
   });
 }
 
+function maskKey(key: string): string {
+  if (!key) return '••••••••';
+  return key.length > 8 ? `${key.slice(0, 3)}••••••••${key.slice(-4)}` : '••••••••';
+}
+
 const createMutation = useMutation({
   mutationFn: () => adminApi.createApiKey(name.value.trim()),
   onSuccess: async (created) => {
-    addPendingApiKey(created);
     name.value = '';
-    toast.success('API Key 已生成');
+    toast.success(`API Key「${created.name}」已创建，可在列表复制`);
     await queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys });
+  },
+  onError: (error) => {
+    toast.error(error instanceof Error ? error.message : '创建 API Key 失败');
   },
 });
 
 const deleteMutation = useMutation({
   mutationFn: adminApi.deleteApiKey,
-  onSuccess: async (_data, keyId) => {
-    dismissNewKey(keyId);
+  onSuccess: async () => {
     toast.success('API Key 已删除');
     await queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys });
   },
@@ -130,22 +89,36 @@ function handleCreateFromEnter(event: KeyboardEvent): void {
   handleCreate();
 }
 
-function dismissNewKey(keyId: string): void {
-  pendingApiKeys.value = pendingApiKeys.value.filter((pendingKey) => pendingKey.id !== keyId);
-}
-
-async function copyAndCloseNewKey(pendingKey: PendingApiKey): Promise<void> {
-  const copied = await copy(pendingKey.apiKey, 'API Key 已复制');
-  if (copied) {
-    dismissNewKey(pendingKey.id);
-    return;
-  }
-  pendingKey.copyFailed = true;
-}
-
 const columns: Column<ApiKeyRecord>[] = [
-  { title: '名称', key: 'name', minWidth: 160 },
-  { title: '预览', key: 'preview', minWidth: 180 },
+  { title: '名称', key: 'name', minWidth: 140 },
+  {
+    title: 'Key',
+    key: 'key',
+    minWidth: 220,
+    render: (row) =>
+      h('div', { class: 'flex items-center gap-2' }, [
+        h('span', { class: 'mono' }, maskKey(row.key)),
+        h(
+          CTooltip,
+          { content: '复制 API Key' },
+          {
+            default: () =>
+              h(
+                CButton,
+                {
+                  size: 'sm',
+                  variant: 'secondary',
+                  shape: 'circle',
+                  class: actionButtonClass,
+                  'aria-label': '复制 API Key',
+                  onClick: () => void copy(row.key, 'API Key 已复制'),
+                },
+                { icon: () => h(Copy, { size: 14 }) },
+              ),
+          },
+        ),
+      ]),
+  },
   {
     title: '创建时间',
     key: 'created_at',
@@ -230,37 +203,6 @@ const tableRows = computed(() => rows.value as unknown as Record<string, unknown
           </CInputGroup>
           <div class="me-1 mt-1 text-right text-xs text-muted">{{ nameLength }}/80</div>
         </div>
-
-        <CAlert
-          v-for="pendingKey in pendingApiKeys"
-          :key="pendingKey.id"
-          type="warning"
-          :class="{ 'animate-success': pendingKey.justCreated }"
-        >
-          <div class="mb-2">
-            <strong>
-              API Key「{{ pendingKey.name }}」仅显示一次，请立即复制保存，关闭后无法再次查看
-            </strong>
-          </div>
-          <CInputGroup>
-            <CInput :model-value="pendingKey.apiKey" readonly />
-            <CButton v-if="!pendingKey.copyFailed" @click="copyAndCloseNewKey(pendingKey)">
-              <template #icon>
-                <Copy :size="16" />
-              </template>
-              复制并关闭
-            </CButton>
-            <template v-else>
-              <CButton @click="copy(pendingKey.apiKey, 'API Key 已复制')">
-                <template #icon>
-                  <Copy :size="16" />
-                </template>
-                复制
-              </CButton>
-              <CButton variant="secondary" @click="dismissNewKey(pendingKey.id)">我已保存</CButton>
-            </template>
-          </CInputGroup>
-        </CAlert>
       </div>
     </CCard>
 
