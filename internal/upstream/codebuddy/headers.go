@@ -23,10 +23,10 @@ type CredentialSnapshot struct {
 
 // ConversationIDs 客户端可透传的会话标识；空值时随机生成。
 type ConversationIDs struct {
-	ConversationID          string
-	ConversationRequestID   string
-	ConversationMessageID   string
-	RequestID               string
+	ConversationID        string
+	ConversationRequestID string
+	ConversationMessageID string
+	RequestID             string
 }
 
 var safeDomainRe = regexp.MustCompile(`^[A-Za-z0-9.-]+$`)
@@ -63,6 +63,7 @@ func GenerateHeaders(cred CredentialSnapshot, ids ConversationIDs, cliVersion st
 		"Host":                        host,
 		"Accept":                      "application/json",
 		"Content-Type":                "application/json",
+		"User-Agent":                  "CLI/" + cliVersion + " CodeBuddy/" + cliVersion,
 		"X-Requested-With":            "XMLHttpRequest",
 		"x-stainless-arch":            stainlessArch(),
 		"x-stainless-lang":            "js",
@@ -148,20 +149,20 @@ func AuthStartHeaders(cliVersion string) map[string]string {
 	}
 	host := HostFromEndpoint(defaultEndpoint)
 	return map[string]string{
-		"Host":                    host,
-		"Accept":                  "application/json, text/plain, */*",
-		"Content-Type":            "application/json",
-		"Cache-Control":           "no-cache",
-		"Pragma":                  "no-cache",
-		"X-Requested-With":        "XMLHttpRequest",
-		"X-Domain":                host,
-		"X-No-Authorization":      "true",
-		"X-No-User-Id":            "true",
-		"X-No-Enterprise-Id":      "true",
-		"X-No-Department-Info":    "true",
-		"User-Agent":              "CLI/" + cliVersion + " CodeBuddy/" + cliVersion,
-		"X-Product":               "SaaS",
-		"X-Request-ID":            newHex32(),
+		"Host":                 host,
+		"Accept":               "application/json, text/plain, */*",
+		"Content-Type":         "application/json",
+		"Cache-Control":        "no-cache",
+		"Pragma":               "no-cache",
+		"X-Requested-With":     "XMLHttpRequest",
+		"X-Domain":             host,
+		"X-No-Authorization":   "true",
+		"X-No-User-Id":         "true",
+		"X-No-Enterprise-Id":   "true",
+		"X-No-Department-Info": "true",
+		"User-Agent":           "CLI/" + cliVersion + " CodeBuddy/" + cliVersion,
+		"X-Product":            "SaaS",
+		"X-Request-ID":         newHex32(),
 	}
 }
 

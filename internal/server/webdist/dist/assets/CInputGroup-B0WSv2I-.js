@@ -1,1 +1,0 @@
-import{G as e,H as t,T as n,j as r}from"./vue-DNv1u3Ty.js";var i={class:`c-input-group`},a=r({__name:`CInputGroup`,setup(r){return(r,a)=>(t(),n(`div`,i,[e(r.$slots,`default`)]))}});export{a as t};

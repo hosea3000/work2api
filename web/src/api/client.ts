@@ -24,12 +24,12 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
 }
 
 /**
- * 仅处理本系统认证层返回的 Bearer challenge，避免把上游凭证 401 误判为会话失效。
+ * 任何 401 响应都视为本系统会话失效（无论是否带 WWW-Authenticate challenge），
+ * 触发全局未授权 handler 退出到登录页。
  * 返回 true 表示响应已确认为本系统认证失败。
  */
 export function handleUnauthorizedResponse(response: Response): boolean {
-  const challenge = response.headers.get('WWW-Authenticate')?.trim().toLowerCase();
-  if (response.status !== 401 || challenge !== 'bearer') return false;
+  if (response.status !== 401) return false;
   unauthorizedHandler?.();
   return true;
 }

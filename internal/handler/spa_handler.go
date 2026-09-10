@@ -11,7 +11,7 @@ import (
 
 // SPAStaticHandler 托管 web/dist 构建产物，未匹配路径回退 index.html。
 type SPAStaticHandler struct {
-	fs  embed.FS
+	fs   embed.FS
 	root string
 }
 
@@ -44,7 +44,9 @@ func NewSPAStaticHandler(dist embed.FS, root string) gin.HandlerFunc {
 func RegisterSPARoutes(s *gin.Engine, dist embed.FS, root string) {
 	sub, err := fs.Sub(dist, root)
 	if err == nil {
-		fileServer := http.StripPrefix("/assets/", http.FileServer(http.FS(sub)))
+		// Sub 后 FS 根 = dist/；StripPrefix("/assets")（不带尾斜杠）保留前导 /，
+		// FileServer 在 FS 内以 assets/xxx 命中 dist/assets/xxx。
+		fileServer := http.StripPrefix("/assets", http.FileServer(http.FS(sub)))
 		s.GET("/assets/*filepath", func(c *gin.Context) {
 			fileServer.ServeHTTP(c.Writer, c.Request)
 		})

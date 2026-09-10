@@ -6,6 +6,9 @@ import (
 	"sync"
 	"testing"
 
+	"encoding/base64"
+
+	"github.com/yourname/work2api/internal/model"
 	"github.com/yourname/work2api/internal/upstream/codebuddy"
 )
 
@@ -129,4 +132,33 @@ func TestAddOAuthPersonalAccount(t *testing.T) {
 	// AddOAuth 完整路径需要 repo；此处仅校验 helper 纯函数
 	_ = context.Background()
 	_ = codebuddy.TokenData{}
+}
+
+func TestApplyJWTIdentity(t *testing.T) {
+	cred := &model.Credential{}
+	// payload: {"sub":"u1","nickname":"Hosea","preferred_username":"17673040926","email":"a@b.c"}
+	token := "hdr." + base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"u1","nickname":"Hosea","preferred_username":"17673040926","email":"a@b.c"}`)) + ".sig"
+	applyJWTIdentity(cred, token)
+	if cred.Nickname == nil || *cred.Nickname != "Hosea" {
+		t.Errorf("nickname wrong: %v", cred.Nickname)
+	}
+	if cred.PreferredUsername == nil || *cred.PreferredUsername != "17673040926" {
+		t.Errorf("preferred_username wrong: %v", cred.PreferredUsername)
+	}
+	if cred.Email == nil || *cred.Email != "a@b.c" {
+		t.Errorf("email wrong: %v", cred.Email)
+	}
+	// nickname 缺失 → 回退 preferred_username
+	token2 := "hdr." + base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"u1","preferred_username":"17673040926"}`)) + ".sig"
+	cred2 := &model.Credential{}
+	applyJWTIdentity(cred2, token2)
+	if cred2.Nickname == nil || *cred2.Nickname != "17673040926" {
+		t.Errorf("nickname fallback wrong: %v", cred2.Nickname)
+	}
+	// 非 JWT → 静默跳过
+	cred3 := &model.Credential{}
+	applyJWTIdentity(cred3, "not-a-jwt")
+	if cred3.Nickname != nil || cred3.Email != nil {
+		t.Error("invalid token must be silently skipped")
+	}
 }

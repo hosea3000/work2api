@@ -1,7 +1,8 @@
-# Spec: oauth-device-auth
+# oauth-device-auth Specification
 
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change add-codebuddy-oauth-flow. Update Purpose after archive.
+## Requirements
 ### Requirement: 启动认证端点
 系统 SHALL 提供 `POST /codebuddy/auth/start`（会话 Cookie 保护）：调用上游 `POST {endpoint}/v2/plugin/auth/state?platform=CLI`（启动头集），成功后返回 `{success: true, auth_state, verification_uri_complete, verification_uri, expires_in: 600, interval: 5, status: "awaiting_login"}`。上游返回的 authUrl MUST 校验为无用户信息、无控制字符的绝对 HTTP(S) URL，非法时按启动失败处理。上游不可用或响应无效时返回 `{success: false, error, message}`（200），MUST NOT 泄露上游响应体原文。
 
@@ -58,3 +59,4 @@
 #### Scenario: 取消进行中的认证
 - **WHEN** 对待处理 auth_state 调用 cancel
 - **THEN** 返回 `{cancelled:true}`，后续对该 state 的 poll 返回 403
+

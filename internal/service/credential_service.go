@@ -67,6 +67,10 @@ type CredentialView struct {
 	Enterprise  *string `json:"enterprise_id,omitempty"`
 	CreatedAt   string  `json:"created_at"`
 	ExpiresAt   *int64  `json:"expires_at,omitempty"`
+	// 用户身份展示字段（前端用户名列取 nickname || preferred_username || email || user_id）
+	Nickname          *string `json:"nickname,omitempty"`
+	PreferredUsername *string `json:"preferred_username,omitempty"`
+	Email             *string `json:"email,omitempty"`
 }
 
 func (s *credentialService) view(c model.Credential) CredentialView {
@@ -79,6 +83,10 @@ func (s *credentialService) view(c model.Credential) CredentialView {
 		Enterprise:  c.EnterpriseId,
 		CreatedAt:   c.CreatedAt.Format(time.RFC3339),
 		ExpiresAt:   c.ExpiresAt,
+
+		Nickname:          c.Nickname,
+		PreferredUsername: c.PreferredUsername,
+		Email:             c.Email,
 	}
 }
 
@@ -140,6 +148,7 @@ func (s *credentialService) Add(ctx context.Context, bearerToken string) (*Crede
 		AuthSource:  "manual",
 		Status:      "active",
 	}
+	applyJWTIdentity(cred, bearerToken)
 	// 尝试从 JWT 提取 issuer 信息补 domain / enterprise_id
 	if domain, entID, ok := ExtractIssuerInfo(bearerToken); ok {
 		if domain != "" {
@@ -285,17 +294,17 @@ func (s *credentialService) AddOAuth(ctx context.Context, td *codebuddy.TokenDat
 	}
 	now := time.Now().Unix()
 	cred := &model.Credential{
-		Id:          uuid.NewString(),
-		BearerToken: td.AccessToken,
-		UserId:      "oauth_" + shortHash(td.AccessToken),
-		AuthSource:  "oauth",
-		Status:      "active",
-		ExpiresAt:   td.ExpiresAt,
-		ExpiresIn:   td.ExpiresIn,
-		RefreshToken: stringPtr(td.RefreshToken),
+		Id:               uuid.NewString(),
+		BearerToken:      td.AccessToken,
+		UserId:           "oauth_" + shortHash(td.AccessToken),
+		AuthSource:       "oauth",
+		Status:           "active",
+		ExpiresAt:        td.ExpiresAt,
+		ExpiresIn:        td.ExpiresIn,
+		RefreshToken:     stringPtr(td.RefreshToken),
 		RefreshExpiresAt: td.RefreshExpiresAt,
-		SessionState: stringPtr(td.SessionState),
-		Scope:       stringPtr(td.Scope),
+		SessionState:     stringPtr(td.SessionState),
+		Scope:            stringPtr(td.Scope),
 	}
 	if td.ExpiresAt == nil && td.ExpiresIn != nil {
 		exp := now + *td.ExpiresIn
@@ -316,12 +325,35 @@ func (s *credentialService) AddOAuth(ctx context.Context, td *codebuddy.TokenDat
 			cred.EnterpriseId = &account.EnterpriseID
 		}
 	}
+	applyJWTIdentity(cred, td.AccessToken)
 	if err := s.repo.CreateCredential(ctx, cred); err != nil {
 		return nil, err
 	}
 	s.refreshPool(ctx)
 	v := s.view(*cred)
 	return &v, nil
+}
+
+// applyJWTIdentity 从 JWT payload 提取用户身份展示字段（nickname / preferred_username / email），
+// 原位写入凭证（对齐 _extract_user_info 的 user_info 语义）。解析失败静默跳过。
+func applyJWTIdentity(cred *model.Credential, bearerToken string) {
+	payload, err := jwtPayload(bearerToken)
+	if err != nil {
+		return
+	}
+	if nickname, _ := payload["nickname"].(string); nickname != "" {
+		cred.Nickname = stringPtr(nickname)
+	}
+	if pu, _ := payload["preferred_username"].(string); pu != "" {
+		cred.PreferredUsername = stringPtr(pu)
+	}
+	if email, _ := payload["email"].(string); email != "" {
+		cred.Email = stringPtr(email)
+	}
+	// 兜底：nickname 缺失时参考实现取 preferred_username
+	if cred.Nickname == nil && cred.PreferredUsername != nil {
+		cred.Nickname = cred.PreferredUsername
+	}
 }
 
 func stringPtr(s string) *string {

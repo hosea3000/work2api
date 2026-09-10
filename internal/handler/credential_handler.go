@@ -31,18 +31,21 @@ func (h *CredentialHandler) List(c *gin.Context) {
 	records := make([]gin.H, 0, len(list))
 	for _, v := range list {
 		records = append(records, gin.H{
-			"credential_id":    v.Id,
-			"filename":         v.Id + ".json",
-			"user_id":          v.UserId,
-			"time_remaining":   nil,
+			"credential_id":      v.Id,
+			"filename":           v.Id + ".json",
+			"user_id":            v.UserId,
+			"time_remaining":     nil,
 			"time_remaining_str": "",
-			"is_expired":       v.Status != "active",
-			"token_type":       "Bearer",
-			"auth_source":      v.AuthSource,
-			"enterprise_id":    v.Enterprise,
-			"has_refresh_token": false,
-			"has_token":        true,
-			"token_display":    v.TokenSuffix,
+			"is_expired":         v.Status != "active",
+			"token_type":         "Bearer",
+			"auth_source":        v.AuthSource,
+			"enterprise_id":      v.Enterprise,
+			"has_refresh_token":  false,
+			"has_token":          true,
+			"token_display":      v.TokenSuffix,
+			"nickname":           v.Nickname,
+			"preferred_username": v.PreferredUsername,
+			"email":              v.Email,
 		})
 	}
 	current := gin.H{"status": "no_credentials"}
@@ -54,8 +57,8 @@ func (h *CredentialHandler) List(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"credentials": records,
-		"current":     current,
+		"credentials":           records,
+		"current":               current,
 		"auto_rotation_enabled": h.creds.RotationEnabled(),
 	})
 }
@@ -76,15 +79,18 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 	h.models.Invalidate()
 	c.JSON(http.StatusOK, gin.H{
 		"credential": gin.H{
-			"credential_id": cred.Id,
-			"filename":      cred.Id + ".json",
-			"user_id":       cred.UserId,
-			"is_expired":    false,
-			"token_type":    "Bearer",
-			"auth_source":   cred.AuthSource,
-			"has_refresh_token": false,
-			"has_token":     true,
-			"token_display": cred.TokenSuffix,
+			"credential_id":      cred.Id,
+			"filename":           cred.Id + ".json",
+			"nickname":           cred.Nickname,
+			"preferred_username": cred.PreferredUsername,
+			"email":              cred.Email,
+			"user_id":            cred.UserId,
+			"is_expired":         false,
+			"token_type":         "Bearer",
+			"auth_source":        cred.AuthSource,
+			"has_refresh_token":  false,
+			"has_token":          true,
+			"token_display":      cred.TokenSuffix,
 			"time_remaining_str": "",
 		},
 	})

@@ -56,4 +56,5 @@ docs/swagger.yaml
 
 # Frontend
 web/node_modules/
-web/dist/
+web/dist/*
+!web/dist/.gitkeep

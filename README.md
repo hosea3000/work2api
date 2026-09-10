@@ -94,11 +94,11 @@ make test       # 跑测试
 go test -race ./internal/...
 ```
 
-前端（管理台）位于 `web/`，改动后需重新构建并同步到 `internal/server/webdist/dist/`：
+前端（管理台）位于 `web/`，构建产物经 `web/embed.go` 嵌入二进制，改前端后只需重新构建再编译：
 
 ```bash
 cd web && pnpm install && pnpm run build:bundle
-cp -r dist ../internal/server/webdist/
+cd .. && go build -o bin/server ./cmd/server
 ```
 
 ## 项目结构

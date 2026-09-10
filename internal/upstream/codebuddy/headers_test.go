@@ -16,6 +16,7 @@ func TestGenerateHeadersStandard(t *testing.T) {
 		"X-Agent-Intent", "X-Agent-Purpose", "X-IDE-Type", "X-IDE-Name", "X-IDE-Version",
 		"x-stainless-lang", "x-stainless-runtime", "x-stainless-runtime-version",
 		"X-Conversation-ID", "X-Conversation-Request-ID", "X-Conversation-Message-ID", "X-Request-ID",
+		"User-Agent",
 	}
 	for _, k := range required {
 		if headers[k] == "" {
@@ -26,6 +27,9 @@ func TestGenerateHeadersStandard(t *testing.T) {
 		headers["X-IDE-Type"] != "CLI" || headers["x-stainless-lang"] != "js" ||
 		headers["x-stainless-runtime"] != "node" {
 		t.Errorf("constant header mismatch: %v", headers)
+	}
+	if headers["User-Agent"] != "CLI/2.107.0 CodeBuddy/2.107.0" {
+		t.Errorf("user-agent wrong: %q", headers["User-Agent"])
 	}
 	if len(headers["X-Conversation-Request-ID"]) != 32 {
 		t.Errorf("conversation request id must be hex16 (32 chars), got %d", len(headers["X-Conversation-Request-ID"]))

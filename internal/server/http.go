@@ -2,13 +2,14 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/yourname/work2api/docs"
 	"github.com/yourname/work2api/internal/handler"
 	"github.com/yourname/work2api/internal/middleware"
 	"github.com/yourname/work2api/internal/router"
 	"github.com/yourname/work2api/pkg/server/http"
-	swaggerfiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	web "github.com/yourname/work2api/web"
 )
 
 func NewHTTPServer(
@@ -41,7 +42,7 @@ func NewHTTPServer(
 	)
 
 	router.InitGatewayRouter(deps, s.Engine)
-	handler.RegisterSPARoutes(s.Engine, distFS, "webdist/dist")
+	handler.RegisterSPARoutes(s.Engine, web.DistFS, "dist")
 
 	v1 := s.Group("/v1")
 	router.InitUserRouter(deps, v1)
