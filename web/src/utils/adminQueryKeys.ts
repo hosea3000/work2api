@@ -10,9 +10,5 @@ export function adminQueryKeys(username: string) {
     settings: [...root, 'settings'] as const,
     playgroundModels: (provider: string) => [...root, 'playground', provider, 'models'] as const,
     statsOverview: (params: unknown) => [...root, 'stats', 'overview', params] as const,
-    statsRequests: (params: unknown) => [...root, 'stats', 'requests', params] as const,
-    statsDimension: (dimension: string, params: unknown) =>
-      [...root, 'stats', 'dimensions', dimension, params] as const,
-    statsRequest: (requestId: number) => [...root, 'stats', 'requests', requestId] as const,
   };
 }

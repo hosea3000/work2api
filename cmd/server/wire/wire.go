@@ -32,6 +32,7 @@ var repositorySet = wire.NewSet(
 	repository.NewCodeBuddyCredentialRepository,
 	repository.NewTraeCredentialRepository,
 	repository.NewPoolStateRepository,
+	repository.NewStatsRepository,
 )
 
 var serviceSet = wire.NewSet(
@@ -53,6 +54,7 @@ var serviceSet = wire.NewSet(
 	service.NewTraeChatExecutor,
 	bootstrap.NewTraeModelsServiceFromConfig,
 	service.NewQuotaService,
+	service.NewStatsService,
 )
 
 var handlerSet = wire.NewSet(

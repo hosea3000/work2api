@@ -68,6 +68,7 @@ func (r *gatewayRepository) EnsureSchema(ctx context.Context) error {
 		&model.CodeBuddyCheckinRecord{},
 		&model.TraeCheckinRecord{},
 		&model.PoolState{},
+		&model.RequestRecord{},
 	); err != nil {
 		return err
 	}

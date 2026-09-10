@@ -65,7 +65,9 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	requestPolicies := bootstrap.NewRequestPolicies(codeBuddyConfig)
 	chatExecutor := service.NewChatExecutor(codeBuddyCredentialService, client, requestPolicies)
 	openAIHandler := handler.NewOpenAIHandler(handlerHandler, chatExecutor, modelsService)
-	adminStubHandler := handler.NewAdminStubHandler(handlerHandler)
+	statsRepository := repository.NewStatsRepository(repositoryRepository)
+	statsService := service.NewStatsService(statsRepository)
+	adminStubHandler := handler.NewAdminStubHandler(handlerHandler, codeBuddyCredentialService, traeCredentialService, statsService)
 	authStateStore := service.NewAuthStateStore()
 	oAuthService := service.NewOAuthService(client, codeBuddyCredentialService, modelsService, authStateStore)
 	codeBuddyAuthHandler := handler.NewCodeBuddyAuthHandler(handlerHandler, oAuthService)
@@ -89,6 +91,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 		TraeChatHandler:            traeChatHandler,
 		SessionService:             sessionService,
 		APIKeyService:              apiKeyService,
+		StatsService:               statsService,
 	}
 	httpServer := server.NewHTTPServer(routerDeps)
 	jobJob := job.NewJob(transaction, logger, sidSid)
@@ -106,9 +109,9 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 
 // wire.go:
 
-var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewGatewayRepository, repository.NewCodeBuddyCredentialRepository, repository.NewTraeCredentialRepository, repository.NewPoolStateRepository)
+var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repository.NewTransaction, repository.NewUserRepository, repository.NewGatewayRepository, repository.NewCodeBuddyCredentialRepository, repository.NewTraeCredentialRepository, repository.NewPoolStateRepository, repository.NewStatsRepository)
 
-var serviceSet = wire.NewSet(service.NewService, service.NewUserService, config.LoadCodeBuddyConfig, bootstrap.NewCodeBuddyClient, bootstrap.NewRequestPolicies, bootstrap.NewModelsServiceFromConfig, service.NewCredentialPool, service.NewTraeCredentialPool, service.NewCodeBuddyCredentialService, service.NewTraeCredentialService, service.NewCodeBuddyCheckinService, service.NewTraeCheckinService, service.NewAPIKeyService, service.NewSessionService, service.NewChatExecutor, service.NewTraeChatExecutor, bootstrap.NewTraeModelsServiceFromConfig, service.NewQuotaService)
+var serviceSet = wire.NewSet(service.NewService, service.NewUserService, config.LoadCodeBuddyConfig, bootstrap.NewCodeBuddyClient, bootstrap.NewRequestPolicies, bootstrap.NewModelsServiceFromConfig, service.NewCredentialPool, service.NewTraeCredentialPool, service.NewCodeBuddyCredentialService, service.NewTraeCredentialService, service.NewCodeBuddyCheckinService, service.NewTraeCheckinService, service.NewAPIKeyService, service.NewSessionService, service.NewChatExecutor, service.NewTraeChatExecutor, bootstrap.NewTraeModelsServiceFromConfig, service.NewQuotaService, service.NewStatsService)
 
 var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewAuthHandler, handler.NewAPIKeyHandler, handler.NewCodeBuddyCredentialHandler, handler.NewTraeCredentialHandler, handler.NewOpenAIHandler, handler.NewAdminStubHandler, handler.NewCodeBuddyAuthHandler, handler.NewTraeAuthHandler, handler.NewTraeChatHandler, service.NewAuthStateStore, service.NewOAuthService, service.NewTokenRefreshService, service.NewTraeTokenRefreshService, service.NewTraeLoginService, bootstrap.NewTraeClient)
 

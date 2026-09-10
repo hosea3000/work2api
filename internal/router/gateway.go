@@ -26,6 +26,7 @@ type RouterDeps struct {
 	TraeChatHandler    *handler.TraeChatHandler
 	SessionService     service.SessionService
 	APIKeyService      service.APIKeyService
+	StatsService       service.StatsService
 }
 
 func InitUserRouter(
@@ -98,11 +99,11 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 		admin.POST("/trae/credentials/:credential_id/daily-checkin", deps.TraeCredentialHandler.DailyCheckin)
 		admin.POST("/trae/credentials/:credential_id/quota/refresh", deps.TraeCredentialHandler.RefreshQuota)
 
-		// API 测试（Playground）：会话鉴权，复用聊天/模型执行器（无需 sk- key）
-		admin.GET("/playground/codebuddy/openai/v1/models", deps.OpenAIHandler.Models)
-		admin.POST("/playground/codebuddy/openai/v1/chat/completions", deps.OpenAIHandler.ChatCompletions)
-		admin.GET("/playground/trae/openai/v1/models", deps.TraeChatHandler.Models)
-		admin.POST("/playground/trae/openai/v1/chat/completions", deps.TraeChatHandler.ChatCompletions)
+	// API 测试（Playground）：会话鉴权，复用聊天/模型执行器（无需 sk- key）
+	admin.GET("/playground/codebuddy/openai/v1/models", deps.OpenAIHandler.Models)
+	admin.POST("/playground/codebuddy/openai/v1/chat/completions", middleware.RecordRequest(deps.Logger, deps.StatsService), deps.OpenAIHandler.ChatCompletions)
+	admin.GET("/playground/trae/openai/v1/models", deps.TraeChatHandler.Models)
+	admin.POST("/playground/trae/openai/v1/chat/completions", middleware.RecordRequest(deps.Logger, deps.StatsService), deps.TraeChatHandler.ChatCompletions)
 
 		// 统计（打桩）
 		admin.GET("/stats/overview", deps.AdminStubHandler.StatsOverview)
@@ -136,7 +137,7 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 	openai := s.Group("/codebuddy/openai/v1")
 	openai.Use(middleware.APIKeyAuth(deps.Logger, deps.APIKeyService))
 	{
-		openai.POST("/chat/completions", deps.OpenAIHandler.ChatCompletions)
+		openai.POST("/chat/completions", middleware.RecordRequest(deps.Logger, deps.StatsService), deps.OpenAIHandler.ChatCompletions)
 		openai.GET("/models", deps.OpenAIHandler.Models)
 	}
 
@@ -144,7 +145,7 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 	trae := s.Group("/trae/openai/v1")
 	trae.Use(middleware.APIKeyAuth(deps.Logger, deps.APIKeyService))
 	{
-		trae.POST("/chat/completions", deps.TraeChatHandler.ChatCompletions)
+		trae.POST("/chat/completions", middleware.RecordRequest(deps.Logger, deps.StatsService), deps.TraeChatHandler.ChatCompletions)
 		trae.GET("/models", deps.TraeChatHandler.Models)
 	}
 }

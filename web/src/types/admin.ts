@@ -18,8 +18,6 @@ export interface AdminStatus {
   username: string;
   source: string;
   uptime_seconds: number;
-  api_base_url: string;
-  anthropic_api_base_url: string;
   credentials: {
     total: number;
     valid: number;

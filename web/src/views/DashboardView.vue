@@ -26,7 +26,6 @@ import {
 } from '../utils/dashboardStatus';
 import { useSessionStore } from '../stores/session';
 import { adminQueryKeys } from '../utils/adminQueryKeys';
-import { chunkLoadRecovery } from '../utils/chunkLoadRecovery';
 
 const { copy } = useClipboard();
 const session = useSessionStore();
@@ -213,20 +212,15 @@ async function refreshDashboard(): Promise<unknown> {
 
 const dashboardQuery = { isFetching: combinedFetching, refetch: refreshDashboard };
 
-function copyApiBaseUrl() {
-  const value = statusData.value?.api_base_url;
-  if (!value) return;
-  copy(value, '客户端入口地址已复制');
+const codebuddyApiBaseUrl = `${window.location.origin}/codebuddy/openai/v1`;
+const traeApiBaseUrl = `${window.location.origin}/trae/openai/v1`;
+
+function copyCodebuddyApiBaseUrl() {
+  copy(codebuddyApiBaseUrl, 'CodeBuddy API 地址已复制');
 }
 
-function copyAnthropicApiBaseUrl() {
-  const value = statusData.value?.anthropic_api_base_url;
-  if (!value) return;
-  copy(value, 'Claude Code 入口地址已复制');
-}
-
-function openStats() {
-  return chunkLoadRecovery.push({ name: 'stats' });
+function copyTraeApiBaseUrl() {
+  copy(traeApiBaseUrl, 'TRAE API 地址已复制');
 }
 </script>
 
@@ -281,12 +275,7 @@ function openStats() {
         :value="todayRequestValue"
         :tone="todayRequestTone"
         :icon="Activity"
-        meta="查看持久化统计"
-        class="cursor-pointer"
-        role="link"
-        tabindex="0"
-        @click="openStats"
-        @keyup.enter="openStats"
+        meta="今日请求"
       >
         <template #corner>
           <CTooltip :content="todaySuccessRateTooltip">
@@ -314,13 +303,13 @@ function openStats() {
       />
     </div>
 
-    <CCard title="OpenAI 客户端入口">
+    <CCard title="CodeBuddy API 地址">
       <CInputGroup>
-        <CInput :model-value="statusData?.api_base_url || ''" readonly />
+        <CInput :model-value="codebuddyApiBaseUrl" readonly />
         <CButton
           variant="secondary"
-          aria-label="复制 OpenAI 客户端入口地址"
-          @click="copyApiBaseUrl"
+          aria-label="复制 CodeBuddy API 地址"
+          @click="copyCodebuddyApiBaseUrl"
         >
           <template #icon>
             <Link :size="16" />
@@ -330,26 +319,20 @@ function openStats() {
       </CInputGroup>
     </CCard>
 
-    <CCard title="Anthropic 客户端入口">
-      <div class="flex flex-col gap-3">
-        <CInputGroup>
-          <CInput :model-value="statusData?.anthropic_api_base_url || ''" readonly />
-          <CButton
-            variant="secondary"
-            aria-label="复制 Anthropic 客户端入口地址"
-            @click="copyAnthropicApiBaseUrl"
-          >
-            <template #icon>
-              <Link :size="16" />
-            </template>
-            复制
-          </CButton>
-        </CInputGroup>
-        <CAlert type="info">
-          Claude Code 配置的模型 ID 须使用 anthropic/codebuddy/&lt;真实模型 ID&gt; 形式，可参考 API
-          测试页模型列表。
-        </CAlert>
-      </div>
+    <CCard title="TRAE API 地址">
+      <CInputGroup>
+        <CInput :model-value="traeApiBaseUrl" readonly />
+        <CButton
+          variant="secondary"
+          aria-label="复制 TRAE API 地址"
+          @click="copyTraeApiBaseUrl"
+        >
+          <template #icon>
+            <Link :size="16" />
+          </template>
+          复制
+        </CButton>
+      </CInputGroup>
     </CCard>
   </div>
 </template>

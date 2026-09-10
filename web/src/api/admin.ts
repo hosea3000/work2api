@@ -18,12 +18,6 @@ import type {
   SettingsResponse,
   StatsOverviewQuery,
   StatsOverviewResponse,
-  StatsDimension,
-  StatsDimensionQuery,
-  StatsDimensionResponse,
-  StatsRequestRecord,
-  StatsRequestsQuery,
-  StatsRequestsResponse,
   TraeLoginStartResponse,
   TraeLoginResultResponse,
 } from '../types';
@@ -130,16 +124,6 @@ export const adminApi = {
     ),
   statsOverview: (query: StatsOverviewQuery) =>
     apiRequest<StatsOverviewResponse>(`/api/admin/stats/overview?${buildStatsSearchParams(query)}`),
-  statsRequests: (query: StatsRequestsQuery) =>
-    apiRequest<StatsRequestsResponse>(`/api/admin/stats/requests?${buildStatsSearchParams(query)}`),
-  statsDimensions: (dimension: StatsDimension, query: StatsDimensionQuery) =>
-    apiRequest<StatsDimensionResponse>(
-      `/api/admin/stats/dimensions/${encodeURIComponent(dimension)}?${buildStatsSearchParams(query)}`,
-    ),
-  statsRequestDetail: (requestId: number, snapshot: { id: number; time: number }) =>
-    apiRequest<StatsRequestRecord>(
-      `/api/admin/stats/requests/${encodeURIComponent(String(requestId))}?snapshot_id=${encodeURIComponent(String(snapshot.id))}&snapshot_time=${encodeURIComponent(String(snapshot.time))}`,
-    ),
 };
 
 export const codebuddyOAuthApi = {

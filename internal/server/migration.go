@@ -30,6 +30,7 @@ func (m *MigrateServer) Start(ctx context.Context) error {
 		&model.CodeBuddyCheckinRecord{},
 		&model.TraeCheckinRecord{},
 		&model.PoolState{},
+		&model.RequestRecord{},
 	); err != nil {
 		m.log.Error("migrate error", zap.Error(err))
 		return err

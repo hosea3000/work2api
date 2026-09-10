@@ -4,8 +4,6 @@ import { isNavigationFailure, NavigationFailureType, useRoute } from 'vue-router
 import { useQueryClient } from '@tanstack/vue-query';
 import {
   Activity,
-  BookOpen,
-  ChartNoAxesCombined,
   KeyRound,
   LogOut,
   Menu as MenuIcon,
@@ -35,11 +33,9 @@ const queryClient = useQueryClient();
 
 const navItems = [
   { routeName: 'dashboard', label: '总览', icon: Activity },
-  { routeName: 'stats', label: '统计', icon: ChartNoAxesCombined },
   { routeName: 'credentials', label: '凭证', icon: KeyRound },
   { routeName: 'api-keys', label: 'API Key', icon: ShieldCheck },
   { routeName: 'console', label: 'API 测试', icon: TerminalSquare },
-  { routeName: 'api-docs', label: '开发文档', icon: BookOpen },
   { routeName: 'settings', label: '设置', icon: Settings },
 ];
 
