@@ -42,11 +42,11 @@ func NewSPAStaticHandler(dist embed.FS, root string) gin.HandlerFunc {
 
 // RegisterSPARoutes 挂载静态资源路由（优先级低于已注册 API 路由）。
 func RegisterSPARoutes(s *gin.Engine, dist embed.FS, root string) {
-	sub, err := fs.Sub(dist, root)
+	// dist/assets 子树：Sub 后 FS 根 = assets/，
+	// StripPrefix("/assets") 后路径 /xxx → FS 内 assets 前缀去掉后正好命中 xxx。
+	assetsSub, err := fs.Sub(dist, root+"/assets")
 	if err == nil {
-		// Sub 后 FS 根 = dist/；StripPrefix("/assets")（不带尾斜杠）保留前导 /，
-		// FileServer 在 FS 内以 assets/xxx 命中 dist/assets/xxx。
-		fileServer := http.StripPrefix("/assets", http.FileServer(http.FS(sub)))
+		fileServer := http.StripPrefix("/assets", http.FileServer(http.FS(assetsSub)))
 		s.GET("/assets/*filepath", func(c *gin.Context) {
 			fileServer.ServeHTTP(c.Writer, c.Request)
 		})
