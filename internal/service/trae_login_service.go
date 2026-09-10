@@ -61,7 +61,7 @@ type TraeResultState struct {
 
 // TraeCredentialIngestor 回调捕获与粘贴导入共享的入库流程抽象（供测试替身）。
 type TraeCredentialIngestor interface {
-	Ingest(ctx context.Context, info *trae.CallbackInfo, machineID, deviceID string) (*model.Credential, error)
+	Ingest(ctx context.Context, info *trae.CallbackInfo, machineID, deviceID string) (*model.TraeCredential, error)
 }
 
 // TraeLoginService TRAE 网页登录闭环编排。
@@ -70,13 +70,11 @@ type TraeLoginService struct {
 	logins      map[string]*TraePendingLogin
 	callbackURL string // http://127.0.0.1:{port}/authorize
 
-	repo             repository.GatewayRepository
-	creds            CredentialService
-	client           *trae.Client
-	poolOrchestrator *CredentialPool
+	repo   repository.TraeCredentialRepository
+	client *trae.Client
 }
 
-func NewTraeLoginService(repo repository.GatewayRepository, creds CredentialService, client *trae.Client, pool *CredentialPool, conf *config.CodeBuddyConfig) *TraeLoginService {
+func NewTraeLoginService(repo repository.TraeCredentialRepository, client *trae.Client, conf *config.CodeBuddyConfig) *TraeLoginService {
 	port := 18080
 	if conf != nil && conf.TraeCallbackPort > 0 {
 		port = conf.TraeCallbackPort
@@ -84,10 +82,8 @@ func NewTraeLoginService(repo repository.GatewayRepository, creds CredentialServ
 	return &TraeLoginService{
 		logins:           map[string]*TraePendingLogin{},
 		callbackURL:      fmt.Sprintf("http://%s:%d/authorize", traeCallbackHost, port),
-		repo:             repo,
-		creds:            creds,
-		client:           client,
-		poolOrchestrator: pool,
+		repo:   repo,
+		client: client,
 	}
 }
 
@@ -178,7 +174,7 @@ func (s *TraeLoginService) HandleAuthorize(ctx context.Context, rawURL string) e
 
 // Import 粘贴回调 URL 导入（远程部署兜底，SessionAuth 保护）。
 // machine/device 取回调参数或新生成（无 pending 上下文）。
-func (s *TraeLoginService) Import(ctx context.Context, callbackURL string) (*model.Credential, error) {
+func (s *TraeLoginService) Import(ctx context.Context, callbackURL string) (*model.TraeCredential, error) {
 	info, err := trae.ParseCallback(callbackURL)
 	if err != nil {
 		return nil, err
@@ -214,7 +210,7 @@ func (s *TraeLoginService) ingestAndMark(ctx context.Context, info *trae.Callbac
 
 // ingest 共享入库流程：ExchangeToken（轮换 RT）→ GetUserInfo → CreateCredential(provider=trae)。
 // RefreshToken 缺失（仅 userJwt.Token 兜底）时跳过 Exchange 直接入库。
-func (s *TraeLoginService) ingest(ctx context.Context, info *trae.CallbackInfo, machineID, deviceID string) (*model.Credential, error) {
+func (s *TraeLoginService) ingest(ctx context.Context, info *trae.CallbackInfo, machineID, deviceID string) (*model.TraeCredential, error) {
 	bearer := info.AccessToken
 	refreshToken := info.RefreshToken
 	expiresAt := info.ExpiresAt
@@ -233,19 +229,16 @@ func (s *TraeLoginService) ingest(ctx context.Context, info *trae.CallbackInfo, 
 		return nil, fmt.Errorf("no access token after exchange")
 	}
 
-	cred := &model.Credential{
+	cred := &model.TraeCredential{
 		Id:           newUUID(),
 		BearerToken:  bearer,
 		AuthSource:   "web_login",
-		Provider:     "trae",
 		Status:       "active",
 		ExpiresAt:    int64Ptr(expiresAt),
 		RefreshToken: stringPtr(refreshToken),
 		MachineID:    stringPtr(machineID),
 		DeviceID:     stringPtr(deviceID),
 		UserId:       info.UID,
-		Domain:       stringPtr(trae.Domain),
-		EnterpriseId: stringPtr(info.EnterpriseID),
 		Nickname:     stringPtr(info.Nickname),
 	}
 	// GetUserInfo 补全 uid/nickname（失败不阻断：回调 userInfo 通常已带）
@@ -256,16 +249,12 @@ func (s *TraeLoginService) ingest(ctx context.Context, info *trae.CallbackInfo, 
 		if ui.Nickname != "" {
 			cred.Nickname = stringPtr(ui.Nickname)
 		}
-		if ui.EnterpriseID != "" {
-			cred.EnterpriseId = stringPtr(ui.EnterpriseID)
-		}
 	}
 	if cred.UserId == "" {
 		return nil, fmt.Errorf("cannot determine uid from callback or GetUserInfo")
 	}
-	// 同账号去重：同 uid 且同 provider 的凭证已存在则原位更新（重新登录续命），不新增。
-	if existing, err := s.repo.GetCredentialByUserId(ctx, cred.UserId); err == nil && existing != nil &&
-		existing.Provider == "trae" {
+	// 同账号去重：同 uid 的 trae 凭证已存在则原位更新（重新登录续命），不新增。
+	if existing, err := s.repo.GetByUserId(ctx, cred.UserId); err == nil && existing != nil {
 		existing.BearerToken = cred.BearerToken
 		existing.RefreshToken = cred.RefreshToken
 		existing.ExpiresAt = cred.ExpiresAt
@@ -273,13 +262,12 @@ func (s *TraeLoginService) ingest(ctx context.Context, info *trae.CallbackInfo, 
 		existing.MachineID = cred.MachineID
 		existing.DeviceID = cred.DeviceID
 		existing.Nickname = cred.Nickname
-		existing.EnterpriseId = cred.EnterpriseId
-		if err := s.repo.UpdateCredential(ctx, existing); err != nil {
+		if err := s.repo.Update(ctx, existing); err != nil {
 			return nil, fmt.Errorf("update credential failed: %w", err)
 		}
 		return existing, nil
 	}
-	if err := s.repo.CreateCredential(ctx, cred); err != nil {
+	if err := s.repo.Create(ctx, cred); err != nil {
 		return nil, fmt.Errorf("save credential failed: %w", err)
 	}
 	return cred, nil

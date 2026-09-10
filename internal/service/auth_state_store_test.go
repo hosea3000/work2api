@@ -135,7 +135,7 @@ func TestAddOAuthPersonalAccount(t *testing.T) {
 }
 
 func TestApplyJWTIdentity(t *testing.T) {
-	cred := &model.Credential{}
+	cred := &model.CodeBuddyCredential{}
 	// payload: {"sub":"u1","nickname":"Hosea","preferred_username":"17673040926","email":"a@b.c"}
 	token := "hdr." + base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"u1","nickname":"Hosea","preferred_username":"17673040926","email":"a@b.c"}`)) + ".sig"
 	applyJWTIdentity(cred, token)
@@ -150,13 +150,13 @@ func TestApplyJWTIdentity(t *testing.T) {
 	}
 	// nickname 缺失 → 回退 preferred_username
 	token2 := "hdr." + base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"u1","preferred_username":"17673040926"}`)) + ".sig"
-	cred2 := &model.Credential{}
+	cred2 := &model.CodeBuddyCredential{}
 	applyJWTIdentity(cred2, token2)
 	if cred2.Nickname == nil || *cred2.Nickname != "17673040926" {
 		t.Errorf("nickname fallback wrong: %v", cred2.Nickname)
 	}
 	// 非 JWT → 静默跳过
-	cred3 := &model.Credential{}
+	cred3 := &model.CodeBuddyCredential{}
 	applyJWTIdentity(cred3, "not-a-jwt")
 	if cred3.Nickname != nil || cred3.Email != nil {
 		t.Error("invalid token must be silently skipped")

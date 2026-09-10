@@ -11,7 +11,7 @@ import (
 // ModelsService 模型列表：配置模型 ∪ 上游实际模型（有序去重），TTL 缓存。
 type ModelsService struct {
 	client       *codebuddy.Client
-	credService  CredentialService
+	credService  CodeBuddyCredentialService
 	configured   []string
 	ttl          time.Duration
 	mu           sync.Mutex
@@ -20,7 +20,7 @@ type ModelsService struct {
 	hasCache     bool
 }
 
-func NewModelsService(client *codebuddy.Client, credService CredentialService, configured []string, ttlSeconds int) *ModelsService {
+func NewModelsService(client *codebuddy.Client, credService CodeBuddyCredentialService, configured []string, ttlSeconds int) *ModelsService {
 	if ttlSeconds <= 0 {
 		ttlSeconds = 30
 	}

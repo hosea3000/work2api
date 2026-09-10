@@ -17,7 +17,7 @@ import CCard from '../components/ui/CCard.vue';
         <p class="text-sm leading-6 text-muted">
           文档仅允许使用当前管理台登录会话访问；调用
           <code class="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-text-strong"
-            >/openai/v1/*</code
+            >/codebuddy/openai/v1/*</code
           >
           时仍需在 Swagger 中填写管理台生成的 API Key。
         </p>

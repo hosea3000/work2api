@@ -96,3 +96,65 @@ func TestGetUserInfoSuccess(t *testing.T) {
 		t.Errorf("info: %+v", info)
 	}
 }
+
+func TestSOLOHeaders(t *testing.T) {
+	req, _ := http.NewRequest(http.MethodPost, "http://x", nil)
+	SOLOHeaders(req, "at-1", "u-1", "m-1", "d-1", true)
+	checks := map[string]string{
+		"Authorization":        "Cloud-IDE-JWT at-1",
+		"X-Cloudide-Token":     "at-1",
+		"X-Ide-Token":          "at-1",
+		"X-Uid":                "u-1",
+		"X-Machine-Id":         "m-1",
+		"X-Device-Id":          "d-1",
+		"X-App-Id":             AppID,
+		"X-Ide-Version":        IdeVersion,
+		"X-Ide-Version-Code":   IdeVersionCode,
+		"Request-Traffic-Type": "prod",
+		"Accept":               "text/event-stream",
+	}
+	for k, want := range checks {
+		if got := req.Header.Get(k); got != want {
+			t.Errorf("%s=%q want %q", k, got, want)
+		}
+	}
+}
+
+func TestFetchModels(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != EpModels {
+			t.Errorf("path=%s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Cloud-IDE-JWT at-1" {
+			t.Error("missing SOLO auth header")
+		}
+		_, _ = w.Write([]byte(`{"config_info_list":[
+			{"config_name":"glm-5.2","display_config":{"display_name":"GLM-5.2"}},
+			{"config_name":"glm-5.3","display_config":{"display_name":"GLM-5.3"}},
+			{"config_name":""}
+		]}`))
+	}))
+	defer srv.Close()
+
+	c := New()
+	c.AgentHost = srv.URL
+	models, err := c.FetchModels("at-1", "u-1", "m-1", "d-1")
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if len(models) != 2 || models[0].ID != "glm-5.2" || models[1].Name != "GLM-5.3" {
+		t.Errorf("models=%+v", models)
+	}
+}
+
+func TestFetchModelsEmptyErrors(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"config_info_list":[]}`))
+	}))
+	defer srv.Close()
+	c := New()
+	c.AgentHost = srv.URL
+	if _, err := c.FetchModels("at", "u", "m", "d"); err == nil {
+		t.Fatal("want error for empty model list")
+	}
+}

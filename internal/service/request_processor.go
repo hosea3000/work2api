@@ -15,6 +15,19 @@ type RequestPolicies struct {
 
 // ValidateChatRequest 验证 OpenAI 聊天请求（对齐 RequestProcessor.validate_request）。
 func ValidateChatRequest(body map[string]any) *ChatRequestError {
+	if err := validateMessages(body); err != nil {
+		return err
+	}
+	// 上游无法报告停止序列命中：非空 stop 直接拒绝
+	if hasNonEmptyStop(body["stop"]) {
+		return &ChatRequestError{Status: 400, Message: "stop sequences are not supported by CodeBuddy upstream"}
+	}
+	return nil
+}
+
+// validateMessages 仅校验 messages 结构（codebuddy 与 trae 共用）。
+// ponytail: trae 透传 stop（对齐参考实现）；实测上游忽略 stop 再补 400。
+func validateMessages(body map[string]any) *ChatRequestError {
 	if body == nil {
 		return &ChatRequestError{Status: 400, Message: "Request body must be a JSON object"}
 	}
@@ -46,10 +59,6 @@ func ValidateChatRequest(body map[string]any) *ChatRequestError {
 				return &ChatRequestError{Status: 400, Message: "Message must have 'content' field", Item: &i}
 			}
 		}
-	}
-	// 上游无法报告停止序列命中：非空 stop 直接拒绝
-	if hasNonEmptyStop(body["stop"]) {
-		return &ChatRequestError{Status: 400, Message: "stop sequences are not supported by CodeBuddy upstream"}
 	}
 	return nil
 }

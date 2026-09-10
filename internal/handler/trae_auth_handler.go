@@ -76,7 +76,7 @@ func (h *TraeAuthHandler) Import(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success":    true,
-		"credential": gin.H{"id": cred.Id, "provider": cred.Provider, "user_id": cred.UserId},
+		"credential": gin.H{"id": cred.Id, "provider": "trae", "user_id": cred.UserId},
 	})
 }
 

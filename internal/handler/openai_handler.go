@@ -21,7 +21,7 @@ func NewOpenAIHandler(h *Handler, chat *service.ChatExecutor, models *service.Mo
 	return &OpenAIHandler{Handler: h, chat: chat, models: models}
 }
 
-// ChatCompletions POST /openai/v1/chat/completions
+// ChatCompletions POST /codebuddy/openai/v1/chat/completions
 func (h *OpenAIHandler) ChatCompletions(c *gin.Context) {
 	raw, err := io.ReadAll(io.LimitReader(c.Request.Body, 32*1024*1024))
 	if err != nil {
@@ -85,7 +85,7 @@ func (h *OpenAIHandler) writeOpenAIError(c *gin.Context, chatErr *service.ChatRe
 	})
 }
 
-// Models GET /openai/v1/models
+// Models GET /codebuddy/openai/v1/models
 func (h *OpenAIHandler) Models(c *gin.Context) {
 	models := h.models.Available(c.Request.Context())
 	data := make([]gin.H, 0, len(models))

@@ -32,13 +32,13 @@ type StartLimitChecker interface {
 	Consume(state string) bool
 }
 
-func NewOAuthService(client *codebuddy.Client, creds CredentialService, models *ModelsService, store *AuthStateStore) OAuthService {
+func NewOAuthService(client *codebuddy.Client, creds CodeBuddyCredentialService, models *ModelsService, store *AuthStateStore) OAuthService {
 	return &oauthService{client: client, creds: creds, models: models, store: store}
 }
 
 type oauthService struct {
 	client *codebuddy.Client
-	creds  CredentialService
+	creds  CodeBuddyCredentialService
 	models *ModelsService
 	store  *AuthStateStore
 }

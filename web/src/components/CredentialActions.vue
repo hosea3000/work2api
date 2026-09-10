@@ -32,8 +32,10 @@ interface Props {
   isRefreshingQuota?: boolean;
   canEditQuotaProbeMode?: boolean;
   quotaProbeModeDisabledReason?: string;
-  /** trae 凭证不参与 codebuddy 调度（选择/测试/签到），二期开放。 */
+  /** trae 凭证不参与 codebuddy 调度（选择按钮禁用）；测试/签到按各自 can* 开关。 */
   isSchedulable?: boolean;
+  /** 测试按钮可用（trae 凭证走 GetUserInfo 探针后开放）。 */
+  canTest?: boolean;
 }
 
 interface MenuItem {
@@ -60,6 +62,7 @@ const props = withDefaults(defineProps<Props>(), {
   canEditQuotaProbeMode: false,
   quotaProbeModeDisabledReason: '',
   isSchedulable: true,
+  canTest: true,
 });
 
 const emit = defineEmits<{
@@ -86,11 +89,11 @@ const selectDisabled = computed(
   () => !props.isSchedulable || isFixedCurrent.value || actionsBlocked.value,
 );
 const testDisabled = computed(
-  () => !props.isSchedulable || props.isTesting || props.writeInProgress || rowBusy.value,
+  () => !props.canTest || props.isTesting || props.writeInProgress || rowBusy.value,
 );
 const checkinDisabled = computed(
   () =>
-    !props.isSchedulable ||
+    !props.canCheckIn ||
     actionsBlocked.value ||
     Boolean(props.checkinDisabledReason) ||
     props.credential.daily_checkin?.success === true,
@@ -180,8 +183,7 @@ function testCredential(): void {
 
 function handleMenuAction(key: string): void {
   if (actionsBlocked.value) return;
-  if (key === 'checkin' && props.canCheckIn && !checkinDisabled.value) {
-    emit('checkin', props.credential.credential_id);
+  if (key === 'checkin' && props.canCheckIn && !checkinDisabled.value) {    emit('checkin', props.credential.credential_id);
   } else if (key === 'switchAccount' && props.canSwitchAccount) {
     emit('switchAccount', props.credential.credential_id);
   } else if (key === 'refreshQuota' && !props.credential.is_expired) {

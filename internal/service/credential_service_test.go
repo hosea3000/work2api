@@ -14,14 +14,17 @@ func testConf(rotation int) *config.CodeBuddyConfig {
 	return &config.CodeBuddyConfig{RotationCount: rotation}
 }
 
-func mkCred(id string) model.Credential {
-	return model.Credential{Id: id, BearerToken: "tok-" + id, UserId: "u-" + id, Status: "active"}
+func cbCreds(ids ...string) []model.CodeBuddyCredential {
+	out := make([]model.CodeBuddyCredential, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, newCbCred(id, "active"))
+	}
+	return out
 }
 
 func TestPoolRotationCount(t *testing.T) {
 	p := NewCredentialPool(testConf(2))
-	p.LoadAll([]model.Credential{mkCred("a"), mkCred("b")})
-	// 请求1、2 → a；请求3、4 → b
+	p.LoadAll(cbCreds("a", "b"))
 	got := []string{}
 	for i := 0; i < 4; i++ {
 		sel, ok := p.Select()
@@ -37,7 +40,7 @@ func TestPoolRotationCount(t *testing.T) {
 
 func TestPoolRotationDefault1(t *testing.T) {
 	p := NewCredentialPool(testConf(1))
-	p.LoadAll([]model.Credential{mkCred("a"), mkCred("b")})
+	p.LoadAll(cbCreds("a", "b"))
 	ids := map[string]int{}
 	for i := 0; i < 10; i++ {
 		sel, _ := p.Select()
@@ -50,7 +53,7 @@ func TestPoolRotationDefault1(t *testing.T) {
 
 func TestPoolConcurrentSelect(t *testing.T) {
 	p := NewCredentialPool(testConf(1))
-	p.LoadAll([]model.Credential{mkCred("a"), mkCred("b"), mkCred("c")})
+	p.LoadAll(cbCreds("a", "b", "c"))
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	counts := map[string]int{}
@@ -80,7 +83,7 @@ func TestPoolConcurrentSelect(t *testing.T) {
 
 func TestPoolMarkExpiredSkips(t *testing.T) {
 	p := NewCredentialPool(testConf(1))
-	p.LoadAll([]model.Credential{mkCred("a"), mkCred("b")})
+	p.LoadAll(cbCreds("a", "b"))
 	p.MarkExpired("a")
 	for i := 0; i < 5; i++ {
 		sel, ok := p.Select()
@@ -99,7 +102,7 @@ func TestPoolMarkExpiredSkips(t *testing.T) {
 
 func TestPoolManualSelect(t *testing.T) {
 	p := NewCredentialPool(testConf(1))
-	p.LoadAll([]model.Credential{mkCred("a"), mkCred("b")})
+	p.LoadAll(cbCreds("a", "b"))
 	p.SetAutoRotation(false)
 	if err := p.SelectCurrent("b"); err != nil {
 		t.Fatal(err)
@@ -114,80 +117,68 @@ func TestPoolManualSelect(t *testing.T) {
 
 func TestPoolRefreshKeepsCurrent(t *testing.T) {
 	p := NewCredentialPool(testConf(1))
-	p.LoadAll([]model.Credential{mkCred("a"), mkCred("b")})
+	p.LoadAll(cbCreds("a", "b"))
 	if err := p.SelectCurrent("b"); err != nil {
 		t.Fatal(err)
 	}
-	// b 状态变化后 refresh（仍 active）
-	p.Refresh([]model.Credential{mkCred("a"), mkCred("b"), mkCred("c")})
+	p.Refresh(cbCreds("a", "b", "c"))
 	cur, _ := p.Current()
 	if cur.Credential.Id != "b" {
 		t.Errorf("refresh should keep current selected, got %s", cur.Credential.Id)
 	}
-	// b 被摘除 → 回到 a
-	p.Refresh([]model.Credential{mkCred("a"), mkCred("c")})
+	p.Refresh(cbCreds("a", "c"))
 	cur, _ = p.Current()
 	if cur.Credential.Id != "a" {
 		t.Errorf("refresh should fall back to first, got %s", cur.Credential.Id)
 	}
 }
 
-func TestPoolExcludesTraeCredentials(t *testing.T) {
-	// provider 过滤：trae 凭证绝不进入 codebuddy 调度池
-	trae := mkCred("t1")
-	trae.Provider = "trae"
-	p := NewCredentialPool(testConf(1))
-	p.LoadAll([]model.Credential{mkCred("a"), trae})
-	if p.Len() != 1 {
-		t.Fatalf("LoadAll should exclude trae, len=%d", p.Len())
+func TestCodeBuddySelectPersistsAndReloads(t *testing.T) {
+	repo := &fakeCbRepo{saved: cbCreds("a", "b")}
+	state := &fakeStateRepo{}
+	svc := NewCodeBuddyCredentialService(repo, NewCredentialPool(testConf(1)), state, testConf(1), nil)
+	svc.PoolReload(context.Background())
+
+	if _, _, err := svc.Select(context.Background(), "b"); err != nil {
+		t.Fatalf("select: %v", err)
 	}
-	p.Refresh([]model.Credential{mkCred("a"), mkCred("b"), trae})
-	if p.Len() != 2 {
-		t.Fatalf("Refresh should exclude trae, len=%d", p.Len())
+	if st := state.states["codebuddy"]; st == nil || st.AutoRotation || st.CurrentCredentialId == nil || *st.CurrentCredentialId != "b" {
+		t.Fatalf("state not persisted: %+v", st)
 	}
-	for i := 0; i < 10; i++ {
-		sel, ok := p.Select()
-		if !ok || sel.Entry.Credential.Provider == "trae" {
-			t.Fatalf("trae credential selected from pool: %+v", sel.Entry.Credential)
-		}
+
+	// 模拟重启：新服务从 pool_state 恢复当前指针与开关
+	svc2 := NewCodeBuddyCredentialService(repo, NewCredentialPool(testConf(1)), state, testConf(1), nil)
+	svc2.PoolReload(context.Background())
+	cur, _ := svc2.Current(context.Background())
+	if cur == nil || cur.Id != "b" {
+		t.Fatalf("current not restored: %+v", cur)
 	}
-	// 空 provider（存量数据）视为 codebuddy
-	legacy := mkCred("legacy")
-	legacy.Provider = ""
-	p.Refresh([]model.Credential{legacy})
-	if p.Len() != 1 {
-		t.Fatalf("legacy credential (empty provider) should be included, len=%d", p.Len())
+	if svc2.RotationEnabled() {
+		t.Error("auto rotation should stay disabled after reload")
 	}
 }
 
-func TestCheckinSkipsTraeCredentials(t *testing.T) {
-	// trae 凭证排除在 codebuddy 签到扫描之外
-	trae := CredentialView{Provider: "trae", Status: "active"}
-	if isCodebuddyView(trae) {
-		t.Error("trae view must be excluded from checkin scan")
-	}
-	cred := mkCred("t1")
-	cred.Provider = "trae"
-	if isCodebuddy(cred) {
-		t.Error("trae credential must not support codebuddy checkin")
-	}
-}
+func TestTraeSelectPersistsAndReloads(t *testing.T) {
+	repo := &fakeTraeRepo{saved: []model.TraeCredential{newTraeCred("x", "active"), newTraeCred("y", "active")}}
+	state := &fakeStateRepo{}
+	svc := NewTraeCredentialService(repo, NewTraeCredentialPool(), state, nil)
+	svc.PoolReload(context.Background())
 
-func TestTraeNotSchedulable(t *testing.T) {
-	// trae 凭证 select/调度语义拒绝（ErrNotSchedulable 判定基于 isCodebuddy）
-	trae := mkCred("t1")
-	trae.Provider = "trae"
-	if isCodebuddy(trae) {
-		t.Fatal("trae credential should not be codebuddy-schedulable")
+	if _, _, err := svc.Select(context.Background(), "y"); err != nil {
+		t.Fatalf("select: %v", err)
 	}
-	// 非 trae（含存量空 provider）→ 可调度
-	if !isCodebuddy(mkCred("a")) {
-		t.Error("empty provider (legacy) should be schedulable")
+	if st := state.states["trae"]; st == nil || st.AutoRotation || st.CurrentCredentialId == nil || *st.CurrentCredentialId != "y" {
+		t.Fatalf("state not persisted: %+v", st)
+	}
+	svc2 := NewTraeCredentialService(repo, NewTraeCredentialPool(), state, nil)
+	svc2.PoolReload(context.Background())
+	cur, _ := svc2.Current(context.Background())
+	if cur == nil || cur.Id != "y" {
+		t.Fatalf("current not restored: %+v", cur)
 	}
 }
 
 func TestExtractUserIDFromJWT(t *testing.T) {
-	// header.payload.signature — payload = {"sub":"user123"}
 	token := "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyMTIzIn0.sig"
 	uid, err := ExtractUserIDFromJWT(token)
 	if err != nil || uid != "user123" {
@@ -202,7 +193,6 @@ func TestExtractUserIDFromJWT(t *testing.T) {
 }
 
 func TestExtractIssuerInfo(t *testing.T) {
-	// iss = https://team.example.com/auth/realms/sso-999
 	payload := `{"sub":"u1","iss":"https://team.example.com/auth/realms/sso-999"}`
 	token := "hdr." + b64url(payload) + ".sig"
 	domain, ent, ok := ExtractIssuerInfo(token)
@@ -214,5 +204,3 @@ func TestExtractIssuerInfo(t *testing.T) {
 func b64url(s string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(s))
 }
-
-var _ = context.Background

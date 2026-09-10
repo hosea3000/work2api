@@ -16,13 +16,13 @@ const RefreshWindowSeconds int64 = 86400
 
 // TokenRefreshService OAuth 凭证每小时刷新扫描（方案 C：最小实现）。
 type TokenRefreshService struct {
-	creds  CredentialService
+	creds  CodeBuddyCredentialService
 	client *codebuddy.Client
 	rand   *rand.Rand
 	mu     sync.Mutex
 }
 
-func NewTokenRefreshService(creds CredentialService, client *codebuddy.Client) *TokenRefreshService {
+func NewTokenRefreshService(creds CodeBuddyCredentialService, client *codebuddy.Client) *TokenRefreshService {
 	return &TokenRefreshService{
 		creds:  creds,
 		client: client,
@@ -56,7 +56,7 @@ type credentialForRefresh struct {
 }
 
 // credFull 刷新执行所需的完整凭证视图（gorm 模型 + 原位更新用）。
-type credFull = model.Credential
+type credFull = model.CodeBuddyCredential
 
 // RunLoop 阻塞运行：首轮立即扫描，之后每小时一轮。
 func (s *TokenRefreshService) RunLoop(ctx context.Context) {
@@ -81,9 +81,6 @@ func (s *TokenRefreshService) scanOnce(ctx context.Context) {
 	}
 	now := time.Now().Unix()
 	for _, view := range all {
-		if !isCodebuddyView(view) {
-			continue // TRAE 凭证由 trae 刷新逻辑负责（二期），codebuddy 刷新接口不得触碰
-		}
 		select {
 		case <-ctx.Done():
 			return

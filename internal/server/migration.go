@@ -24,9 +24,12 @@ func (m *MigrateServer) Start(ctx context.Context) error {
 	if err := m.db.AutoMigrate(
 		&model.User{},
 		&model.AdminUser{},
-		&model.Credential{},
 		&model.APIKey{},
-		&model.CheckinRecord{},
+		&model.CodeBuddyCredential{},
+		&model.TraeCredential{},
+		&model.CodeBuddyCheckinRecord{},
+		&model.TraeCheckinRecord{},
+		&model.PoolState{},
 	); err != nil {
 		m.log.Error("migrate error", zap.Error(err))
 		return err

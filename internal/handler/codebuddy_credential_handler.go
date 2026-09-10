@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -9,26 +8,24 @@ import (
 	"github.com/yourname/work2api/internal/service"
 )
 
-// CredentialHandler 管理台凭证管理（含签到、选择、轮换开关、测试）。
-type CredentialHandler struct {
+// CodeBuddyCredentialHandler 管理台 CodeBuddy 凭证管理。
+type CodeBuddyCredentialHandler struct {
 	*Handler
-	creds        service.CredentialService
-	checkin      service.CheckinService
-	models       *service.ModelsService
-	credExecutor *service.ChatExecutor
+	creds   service.CodeBuddyCredentialService
+	checkin service.CodeBuddyCheckinService
+	models  *service.ModelsService
 }
 
-func NewCredentialHandler(h *Handler, creds service.CredentialService, checkin service.CheckinService, models *service.ModelsService, chat *service.ChatExecutor) *CredentialHandler {
-	return &CredentialHandler{Handler: h, creds: creds, checkin: checkin, models: models, credExecutor: chat}
+func NewCodeBuddyCredentialHandler(h *Handler, creds service.CodeBuddyCredentialService, checkin service.CodeBuddyCheckinService, models *service.ModelsService) *CodeBuddyCredentialHandler {
+	return &CodeBuddyCredentialHandler{Handler: h, creds: creds, checkin: checkin, models: models}
 }
 
-func (h *CredentialHandler) List(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) List(c *gin.Context) {
 	list, err := h.creds.List(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "list credentials failed"})
 		return
 	}
-	// 对齐 CredentialsResponse / CredentialRecord / CurrentCredential 类型
 	records := make([]gin.H, 0, len(list))
 	for _, v := range list {
 		records = append(records, gin.H{
@@ -52,11 +49,7 @@ func (h *CredentialHandler) List(c *gin.Context) {
 	}
 	current := gin.H{"status": "no_credentials"}
 	if cur, _ := h.creds.Current(c.Request.Context()); cur != nil {
-		current = gin.H{
-			"status":        "auto_rotation",
-			"credential_id": cur.Id,
-			"user_id":       cur.UserId,
-		}
+		current = gin.H{"status": "auto_rotation", "credential_id": cur.Id, "user_id": cur.UserId}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"credentials":           records,
@@ -65,7 +58,7 @@ func (h *CredentialHandler) List(c *gin.Context) {
 	})
 }
 
-func (h *CredentialHandler) Create(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) Create(c *gin.Context) {
 	var req struct {
 		BearerToken string `json:"bearer_token"`
 	}
@@ -98,7 +91,7 @@ func (h *CredentialHandler) Create(c *gin.Context) {
 	})
 }
 
-func (h *CredentialHandler) Delete(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) Delete(c *gin.Context) {
 	id := c.Param("credential_id")
 	if err := h.creds.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"detail": "credential not found"})
@@ -112,12 +105,12 @@ func (h *CredentialHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"deleted": true, "current": current})
 }
 
-func (h *CredentialHandler) Select(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) Select(c *gin.Context) {
 	id := c.Param("credential_id")
 	cred, disabled, err := h.creds.Select(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, service.ErrNotSchedulable) {
-			c.JSON(http.StatusBadRequest, gin.H{"detail": "该凭证不参与 CodeBuddy 调度"})
+		if errors.Is(err, service.ErrNoCredential) || errors.Is(err, service.ErrCredentialNotFound) {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": "选择凭证失败"})
 			return
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"detail": "选择凭证失败"})
@@ -134,7 +127,7 @@ func (h *CredentialHandler) Select(c *gin.Context) {
 	})
 }
 
-func (h *CredentialHandler) ToggleRotation(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) ToggleRotation(c *gin.Context) {
 	enabled, current, err := h.creds.ToggleRotation(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": "toggle failed"})
@@ -142,11 +135,7 @@ func (h *CredentialHandler) ToggleRotation(c *gin.Context) {
 	}
 	currentView := gin.H{"status": "no_credentials"}
 	if current != nil {
-		currentView = gin.H{
-			"status":        "auto_rotation",
-			"credential_id": current.Id,
-			"user_id":       current.UserId,
-		}
+		currentView = gin.H{"status": "auto_rotation", "credential_id": current.Id, "user_id": current.UserId}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"auto_rotation_enabled": enabled,
@@ -154,38 +143,30 @@ func (h *CredentialHandler) ToggleRotation(c *gin.Context) {
 	})
 }
 
-func (h *CredentialHandler) Test(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) Test(c *gin.Context) {
 	id := c.Param("credential_id")
 	ok, statusCode, detail := h.creds.Test(c.Request.Context(), id)
-	c.JSON(http.StatusOK, gin.H{
-		"ok":          ok,
-		"status_code": statusCode,
-		"detail":      detail,
-	})
+	c.JSON(http.StatusOK, gin.H{"ok": ok, "status_code": statusCode, "detail": detail})
 }
 
-func (h *CredentialHandler) DailyCheckin(c *gin.Context) {
+func (h *CodeBuddyCredentialHandler) DailyCheckin(c *gin.Context) {
 	id := c.Param("credential_id")
 	detail, err := h.checkin.ManualCheckin(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"detail": "签到请求失败"})
 		return
-	}	// 对齐 CredentialDailyCheckin
-	resp := gin.H{
-		"code":    nil,
-		"message": detail["message"],
-		"success": detail["success"],
 	}
+	c.JSON(http.StatusOK, checkinResponse(detail))
+}
+
+// checkinResponse 把签到明细转为前端 CredentialDailyCheckin 结构。
+func checkinResponse(detail map[string]any) gin.H {
+	resp := gin.H{"code": nil, "message": detail["message"], "success": detail["success"]}
 	if code, ok := detail["code"].(*int); ok && code != nil {
 		resp["code"] = *code
 	}
 	if credit, ok := detail["credit"].(*float64); ok && credit != nil {
 		resp["credit"] = *credit
 	}
-	if at, ok := detail["checked_in_at"].(*int64); ok && at != nil {
-		resp["checked_in_at"] = *at
-	}
-	c.JSON(http.StatusOK, resp)
+	return resp
 }
-
-var _ = context.Background

@@ -9,15 +9,16 @@ import (
 	"github.com/yourname/work2api/internal/service"
 )
 
-// CheckinJob 每日签到调度（每天 checkin_hour:checkin_minute 本地时区）。
+// CheckinJob 每日签到调度（每天 checkin_hour:checkin_minute 本地时区），触发两个 provider 的签到。
 type CheckinJob struct {
-	checkin  service.CheckinService
-	conf     *config.CodeBuddyConfig
-	stopCh   chan struct{}
+	cbCheckin   service.CodeBuddyCheckinService
+	traeCheckin service.TraeCheckinService
+	conf        *config.CodeBuddyConfig
+	stopCh      chan struct{}
 }
 
-func NewCheckinJob(checkin service.CheckinService, conf *config.CodeBuddyConfig) *CheckinJob {
-	return &CheckinJob{checkin: checkin, conf: conf, stopCh: make(chan struct{})}
+func NewCheckinJob(cbCheckin service.CodeBuddyCheckinService, traeCheckin service.TraeCheckinService, conf *config.CodeBuddyConfig) *CheckinJob {
+	return &CheckinJob{cbCheckin: cbCheckin, traeCheckin: traeCheckin, conf: conf, stopCh: make(chan struct{})}
 }
 
 // Start 阻塞运行调度循环（供 goroutine 调用）。
@@ -32,7 +33,8 @@ func (j *CheckinJob) Start(ctx context.Context) {
 		log.Printf("[checkin-job] next checkin at %s (in %v)", next.Format(time.RFC3339), wait)
 		select {
 		case <-time.After(wait):
-			j.checkin.RunScheduledCheckin(ctx)
+			j.cbCheckin.RunScheduledCheckin(ctx)
+			j.traeCheckin.RunScheduledCheckin(ctx)
 		case <-j.stopCh:
 			return
 		case <-ctx.Done():

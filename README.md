@@ -4,8 +4,9 @@
 
 ## 核心功能
 
-- `POST /openai/v1/chat/completions`：OpenAI 兼容聊天入口，支持流式（SSE）与非流式（自动聚合上游流）
-- `GET /openai/v1/models`：配置模型 ∪ 上游实际模型（`/v3/config`，带 TTL 缓存）
+- `POST /codebuddy/openai/v1/chat/completions`：CodeBuddy OpenAI 兼容聊天入口，支持流式（SSE）与非流式（自动聚合上游流）
+- `GET /codebuddy/openai/v1/models`：CodeBuddy 模型列表（配置模型 ∪ 上游实际模型，带 TTL 缓存）
+- `POST /trae/openai/v1/chat/completions` + `GET /trae/openai/v1/models`：TRAE SOLO OpenAI 兼容入口（独立凭证池 + 冷却）
 - `sk-...` API Key 鉴权（SHA-256 存储，明文仅创建时展示一次）
 - 凭证池：SQLite 存储 + 内存 round-robin 轮换（每 N 次请求切换，可配置），401/403 自动摘除
 - 凭证管理：手动粘贴 bearer_token（JWT 解析提取 user_id / 企业信息）、选择、测试、删除
@@ -65,7 +66,7 @@ curl -b cookies.txt -X POST http://127.0.0.1:8000/api/admin/credentials \
   -d '{"bearer_token":"<你的 CodeBuddy token>"}'
 
 # 聊天
-curl http://127.0.0.1:8000/openai/v1/chat/completions \
+curl http://127.0.0.1:8000/codebuddy/openai/v1/chat/completions \
   -H "Authorization: Bearer sk-你的key" \
   -H "Content-Type: application/json" \
   -d '{"model":"glm-5.2","messages":[{"role":"user","content":"你好"}]}'

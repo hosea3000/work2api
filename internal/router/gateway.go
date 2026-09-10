@@ -17,11 +17,13 @@ type RouterDeps struct {
 	UserHandler        *handler.UserHandler
 	AuthHandler        *handler.AuthHandler
 	APIKeyHandler      *handler.APIKeyHandler
-	CredentialHandler  *handler.CredentialHandler
+	CodeBuddyCredentialHandler *handler.CodeBuddyCredentialHandler
+	TraeCredentialHandler      *handler.TraeCredentialHandler
 	OpenAIHandler      *handler.OpenAIHandler
 	AdminStubHandler   *handler.AdminStubHandler
 	CodeBuddyAuthHandler *handler.CodeBuddyAuthHandler
 	TraeAuthHandler    *handler.TraeAuthHandler
+	TraeChatHandler    *handler.TraeChatHandler
 	SessionService     service.SessionService
 	APIKeyService      service.APIKeyService
 }
@@ -77,15 +79,23 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 		admin.POST("/api-keys", deps.APIKeyHandler.Create)
 		admin.DELETE("/api-keys/:key_id", deps.APIKeyHandler.Delete)
 
-		// Credentials
-		admin.GET("/credentials", deps.CredentialHandler.List)
-		admin.POST("/credentials", deps.CredentialHandler.Create)
-		admin.DELETE("/credentials/:credential_id", deps.CredentialHandler.Delete)
-		admin.POST("/credentials/rotation/toggle", deps.CredentialHandler.ToggleRotation)
-		admin.POST("/credentials/:credential_id/select", deps.CredentialHandler.Select)
-		admin.POST("/credentials/:credential_id/test", deps.CredentialHandler.Test)
-		admin.POST("/credentials/:credential_id/daily-checkin", deps.CredentialHandler.DailyCheckin)
-		admin.GET("/credentials/:credential_id/quota", deps.AdminStubHandler.CredentialQuota)
+		// CodeBuddy 凭证
+		admin.GET("/codebuddy/credentials", deps.CodeBuddyCredentialHandler.List)
+		admin.POST("/codebuddy/credentials", deps.CodeBuddyCredentialHandler.Create)
+		admin.DELETE("/codebuddy/credentials/:credential_id", deps.CodeBuddyCredentialHandler.Delete)
+		admin.POST("/codebuddy/credentials/rotation/toggle", deps.CodeBuddyCredentialHandler.ToggleRotation)
+		admin.POST("/codebuddy/credentials/:credential_id/select", deps.CodeBuddyCredentialHandler.Select)
+		admin.POST("/codebuddy/credentials/:credential_id/test", deps.CodeBuddyCredentialHandler.Test)
+		admin.POST("/codebuddy/credentials/:credential_id/daily-checkin", deps.CodeBuddyCredentialHandler.DailyCheckin)
+		admin.GET("/codebuddy/credentials/:credential_id/quota", deps.AdminStubHandler.CredentialQuota)
+
+		// TRAE 凭证
+		admin.GET("/trae/credentials", deps.TraeCredentialHandler.List)
+		admin.DELETE("/trae/credentials/:credential_id", deps.TraeCredentialHandler.Delete)
+		admin.POST("/trae/credentials/rotation/toggle", deps.TraeCredentialHandler.ToggleRotation)
+		admin.POST("/trae/credentials/:credential_id/select", deps.TraeCredentialHandler.Select)
+		admin.POST("/trae/credentials/:credential_id/test", deps.TraeCredentialHandler.Test)
+		admin.POST("/trae/credentials/:credential_id/daily-checkin", deps.TraeCredentialHandler.DailyCheckin)
 
 		// 统计（打桩）
 		admin.GET("/stats/overview", deps.AdminStubHandler.StatsOverview)
@@ -115,11 +125,19 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 	// TRAE 登录回调落点（公共：浏览器 302 落点，归属校验在 service 内完成）
 	s.GET("/authorize", deps.TraeAuthHandler.Authorize)
 
-	// OpenAI 兼容入口（API Key 保护）
-	openai := s.Group("/openai/v1")
+	// CodeBuddy OpenAI 兼容入口（API Key 保护）
+	openai := s.Group("/codebuddy/openai/v1")
 	openai.Use(middleware.APIKeyAuth(deps.Logger, deps.APIKeyService))
 	{
 		openai.POST("/chat/completions", deps.OpenAIHandler.ChatCompletions)
 		openai.GET("/models", deps.OpenAIHandler.Models)
+	}
+
+	// TRAE SOLO OpenAI 兼容入口（独立端点，同一套 API Key）
+	trae := s.Group("/trae/openai/v1")
+	trae.Use(middleware.APIKeyAuth(deps.Logger, deps.APIKeyService))
+	{
+		trae.POST("/chat/completions", deps.TraeChatHandler.ChatCompletions)
+		trae.GET("/models", deps.TraeChatHandler.Models)
 	}
 }

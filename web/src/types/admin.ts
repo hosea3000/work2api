@@ -264,10 +264,13 @@ export interface CredentialDailyCheckin {
   code: number | null;
   message: string;
   success: boolean;
+  /** codebuddy：签到获得积分；trae：签到后权益剩余额度（EntUsage 聚合，失败为 null）。 */
   credit?: number | null;
   checked_in_at?: number;
   next_checkin_at?: number;
 }
+
+export type CredentialProvider = 'codebuddy' | 'trae';
 
 export type CredentialQuotaStatus = 'unknown' | 'fresh' | 'stale' | 'error';
 export type CredentialQuotaProbeMode = 'personal' | 'enterprise';
@@ -315,6 +318,7 @@ export interface CredentialAccountsResponse {
 export interface CredentialsResponse {
   credentials: CredentialRecord[];
   current: CurrentCredential;
+  auto_rotation_enabled?: boolean;
 }
 
 export interface CredentialQuotaProbeModeUpdateResponse {

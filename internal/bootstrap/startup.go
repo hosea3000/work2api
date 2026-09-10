@@ -9,18 +9,27 @@ import (
 	"github.com/yourname/work2api/pkg/log"
 )
 
-// Startup 服务启动钩子：补齐 credential 新列、建管理员、加载凭证池。
-func Startup(ctx context.Context, conf *config.CodeBuddyConfig, repo repository.GatewayRepository, sessions service.SessionService, creds service.CredentialService, logger *log.Logger) error {
-	// 幂等迁移：存量库补 provider/machine_id/device_id 列（AutoMigrate 仅在 cmd/migration 中执行）
-	if err := repo.MigrateCredentialColumns(ctx); err != nil {
+// Startup 服务启动钩子：确保表结构、建管理员、加载两个 provider 的凭证池。
+func Startup(
+	ctx context.Context,
+	conf *config.CodeBuddyConfig,
+	repo repository.GatewayRepository,
+	sessions service.SessionService,
+	cbCreds service.CodeBuddyCredentialService,
+	traeCreds service.TraeCredentialService,
+	logger *log.Logger,
+) error {
+	// 自愈建表：全新/删库启动无需先跑 cmd/migration
+	if err := repo.EnsureSchema(ctx); err != nil {
 		return err
 	}
-	logger.Info("credential columns migration ok")
+	logger.Info("schema ensured")
 	if err := sessions.BootstrapIfEmpty(ctx, conf.AdminUsername, conf.AdminPassword); err != nil {
 		return err
 	}
 	logger.Info("admin bootstrap ok")
-	creds.PoolReload(ctx)
-	logger.Info("credential pool loaded")
+	cbCreds.PoolReload(ctx)
+	traeCreds.PoolReload(ctx)
+	logger.Info("credential pools loaded")
 	return nil
 }

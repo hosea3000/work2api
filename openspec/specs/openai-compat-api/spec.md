@@ -4,7 +4,7 @@
 TBD - created by archiving change bootstrap-codebuddy-gateway-core. Update Purpose after archive.
 ## Requirements
 ### Requirement: OpenAI 兼容聊天补全端点
-系统 SHALL 提供 `POST /openai/v1/chat/completions`，接受 OpenAI Chat Completions 格式请求体（model、messages、stream、temperature 等），并返回 OpenAI 格式响应。端点 MUST 仅接受有效的 `sk-...` API Key（Bearer）。
+系统 SHALL 提供 `POST /codebuddy/openai/v1/chat/completions`，接受 OpenAI Chat Completions 格式请求体（model、messages、stream、temperature 等），并返回 OpenAI 格式响应。端点 MUST 仅接受有效的 `sk-...` API Key（Bearer）。
 
 #### Scenario: 非流式请求成功
 - **WHEN** 客户端携带有效 API Key 请求 `stream=false`，且上游凭证可用
@@ -48,7 +48,7 @@ TBD - created by archiving change bootstrap-codebuddy-gateway-core. Update Purpo
 - **THEN** 系统返回 400，错误说明不支持停止序列
 
 ### Requirement: 模型列表端点
-系统 SHALL 提供 `GET /openai/v1/models`，返回配置附加模型与上游 `/v3/config` 实际模型的有序并集（去重、保序），模型查询结果 SHALL 缓存（TTL 30 秒，可配置）。
+系统 SHALL 提供 `GET /codebuddy/openai/v1/models`，返回配置附加模型与上游 `/v3/config` 实际模型的有序并集（去重、保序），模型查询结果 SHALL 缓存（TTL 30 秒，可配置）。
 
 #### Scenario: 返回合并模型列表
 - **WHEN** 客户端携带有效 API Key 请求模型列表且上游可用

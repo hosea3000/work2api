@@ -10,13 +10,13 @@ import (
 	"github.com/yourname/work2api/internal/upstream/codebuddy"
 )
 
-// PoolEntry 轮换池中的凭证快照。
+// PoolEntry CodeBuddy 轮换池中的凭证快照。
 type PoolEntry struct {
-	Credential model.Credential
+	Credential model.CodeBuddyCredential
 	Snapshot   codebuddy.CredentialSnapshot
 }
 
-// CredentialPool 内存轮换池：active 凭证 + round-robin 指针。
+// CredentialPool CodeBuddy 内存轮换池：active 凭证 + round-robin 指针。
 // SQLite 为持久层真相；任何写库后调用 Refresh() 同步内存。
 type CredentialPool struct {
 	mu            sync.Mutex
@@ -28,57 +28,37 @@ type CredentialPool struct {
 }
 
 func NewCredentialPool(conf *config.CodeBuddyConfig) *CredentialPool {
+	rotationCount := 1
+	if conf != nil && conf.RotationCount > 0 {
+		rotationCount = conf.RotationCount
+	}
 	return &CredentialPool{
-		rotationCount: conf.RotationCount,
+		rotationCount: rotationCount,
 		autoRotation:  true,
 	}
 }
 
-// isCodebuddy 报告凭证是否属于 codebuddy provider（池与调度路径只装 codebuddy）。
-func isCodebuddy(c model.Credential) bool {
-	return c.Provider == "" || c.Provider == "codebuddy"
-}
-
-// isCodebuddyView isCodebuddy 的 CredentialView 版本。
-func isCodebuddyView(c CredentialView) bool {
-	return c.Provider == "" || c.Provider == "codebuddy"
-}
-
-// LoadAll 用 DB 中的全部 active codebuddy 凭证重建池。
-func (p *CredentialPool) LoadAll(creds []model.Credential) {
+// LoadAll 用 DB 中的全部 active 凭证重建池。
+func (p *CredentialPool) LoadAll(creds []model.CodeBuddyCredential) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	entries := make([]PoolEntry, 0, len(creds))
-	for _, c := range creds {
-		if c.Status != "active" || !isCodebuddy(c) {
-			continue
-		}
-		entries = append(entries, toPoolEntry(c))
-	}
-	p.entries = entries
+	p.entries = p.buildEntries(creds, nil)
 	p.current = 0
 	p.usageCount = 0
 }
 
 // Refresh 增删/状态变更后调用：用完整列表重算，尽量保持当前凭证选中。
-func (p *CredentialPool) Refresh(creds []model.Credential) {
+func (p *CredentialPool) Refresh(creds []model.CodeBuddyCredential) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	prev := ""
 	if p.current < len(p.entries) {
 		prev = p.entries[p.current].Credential.Id
 	}
-	entries := make([]PoolEntry, 0, len(creds))
-	for _, c := range creds {
-		if c.Status != "active" || !isCodebuddy(c) {
-			continue
-		}
-		entries = append(entries, toPoolEntry(c))
-	}
-	p.entries = entries
+	p.entries = p.buildEntries(creds, nil)
 	p.current = 0
 	if prev != "" {
-		for i, e := range entries {
+		for i, e := range p.entries {
 			if e.Credential.Id == prev {
 				p.current = i
 				break
@@ -87,7 +67,34 @@ func (p *CredentialPool) Refresh(creds []model.Credential) {
 	}
 }
 
-func toPoolEntry(c model.Credential) PoolEntry {
+// RefreshWithCurrent 用完整列表重算，并把指针定位到 preferID（持久化的当前凭证）。
+func (p *CredentialPool) RefreshWithCurrent(creds []model.CodeBuddyCredential, preferID string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.entries = p.buildEntries(creds, nil)
+	p.current = 0
+	if preferID != "" {
+		for i, e := range p.entries {
+			if e.Credential.Id == preferID {
+				p.current = i
+				return
+			}
+		}
+	}
+}
+
+func (p *CredentialPool) buildEntries(creds []model.CodeBuddyCredential, _ any) []PoolEntry {
+	entries := make([]PoolEntry, 0, len(creds))
+	for _, c := range creds {
+		if c.Status != "active" {
+			continue
+		}
+		entries = append(entries, toPoolEntry(c))
+	}
+	return entries
+}
+
+func toPoolEntry(c model.CodeBuddyCredential) PoolEntry {
 	return PoolEntry{
 		Credential: c,
 		Snapshot: codebuddy.CredentialSnapshot{
@@ -121,8 +128,7 @@ type Selection struct {
 }
 
 // Select 按 round-robin 选择凭证（每 rotationCount 次请求切换一次）。
-// 手动选择模式（autoRotation=false）固定返回当前凭证。
-// 池空返回 ok=false。
+// 手动选择模式（autoRotation=false）固定返回当前凭证。池空返回 ok=false。
 func (p *CredentialPool) Select() (Selection, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -179,7 +185,6 @@ func (p *CredentialPool) SelectByID(id string) (PoolEntry, bool) {
 			return e, true
 		}
 	}
-	// 已摘除的凭证可能仍在 DB 中；由调用方决定是否从 DB 取
 	return PoolEntry{}, false
 }
 

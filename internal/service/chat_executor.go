@@ -16,14 +16,14 @@ import (
 
 // ChatExecutor 聊天执行器：选择凭证 → 构造头 → 上游流式请求 → 转换/聚合。
 type ChatExecutor struct {
-	credService    CredentialService
+	credService    CodeBuddyCredentialService
 	client         *codebuddy.Client
 	policies       *RequestPolicies
 	maxRetryCred   int
 	firstChunkWait time.Duration
 }
 
-func NewChatExecutor(credService CredentialService, client *codebuddy.Client, policies *RequestPolicies) *ChatExecutor {
+func NewChatExecutor(credService CodeBuddyCredentialService, client *codebuddy.Client, policies *RequestPolicies) *ChatExecutor {
 	return &ChatExecutor{
 		credService:    credService,
 		client:         client,

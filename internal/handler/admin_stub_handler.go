@@ -25,7 +25,7 @@ func (h *AdminStubHandler) Status(c *gin.Context) {
 		"username":                  c.GetString("admin_username"),
 		"source":                    "users_file",
 		"uptime_seconds":            int(time.Since(h.startTime).Seconds()),
-		"api_base_url":              "/openai/v1",
+		"api_base_url":              "/codebuddy/openai/v1",
 		"anthropic_api_base_url":    "",
 		"credentials": gin.H{
 			"total":   0,

@@ -28,8 +28,13 @@ func NewRequestPolicies(conf *config.CodeBuddyConfig) *service.RequestPolicies {
 }
 
 // NewModelsServiceFromConfig 构造模型服务。
-func NewModelsServiceFromConfig(conf *config.CodeBuddyConfig, client *codebuddy.Client, creds service.CredentialService) *service.ModelsService {
+func NewModelsServiceFromConfig(conf *config.CodeBuddyConfig, client *codebuddy.Client, creds service.CodeBuddyCredentialService) *service.ModelsService {
 	return service.NewModelsService(client, creds, conf.Models, conf.ModelsCacheTTL)
+}
+
+// NewTraeModelsServiceFromConfig 构造 TRAE 模型服务。
+func NewTraeModelsServiceFromConfig(conf *config.CodeBuddyConfig, client *trae.Client, creds service.TraeCredentialService) *service.TraeModelsService {
+	return service.NewTraeModelsService(client, creds, conf.ModelsCacheTTL)
 }
 
 func firstNonEmpty(list []string) string {

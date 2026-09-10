@@ -29,6 +29,9 @@ var repositorySet = wire.NewSet(
 	repository.NewTransaction,
 	repository.NewUserRepository,
 	repository.NewGatewayRepository,
+	repository.NewCodeBuddyCredentialRepository,
+	repository.NewTraeCredentialRepository,
+	repository.NewPoolStateRepository,
 )
 
 var serviceSet = wire.NewSet(
@@ -39,11 +42,16 @@ var serviceSet = wire.NewSet(
 	bootstrap.NewRequestPolicies,
 	bootstrap.NewModelsServiceFromConfig,
 	service.NewCredentialPool,
-	service.NewCredentialService,
+	service.NewTraeCredentialPool,
+	service.NewCodeBuddyCredentialService,
+	service.NewTraeCredentialService,
+	service.NewCodeBuddyCheckinService,
+	service.NewTraeCheckinService,
 	service.NewAPIKeyService,
 	service.NewSessionService,
-	service.NewCheckinService,
 	service.NewChatExecutor,
+	service.NewTraeChatExecutor,
+	bootstrap.NewTraeModelsServiceFromConfig,
 )
 
 var handlerSet = wire.NewSet(
@@ -51,14 +59,17 @@ var handlerSet = wire.NewSet(
 	handler.NewUserHandler,
 	handler.NewAuthHandler,
 	handler.NewAPIKeyHandler,
-	handler.NewCredentialHandler,
+	handler.NewCodeBuddyCredentialHandler,
+	handler.NewTraeCredentialHandler,
 	handler.NewOpenAIHandler,
 	handler.NewAdminStubHandler,
 	handler.NewCodeBuddyAuthHandler,
 	handler.NewTraeAuthHandler,
+	handler.NewTraeChatHandler,
 	service.NewAuthStateStore,
 	service.NewOAuthService,
 	service.NewTokenRefreshService,
+	service.NewTraeTokenRefreshService,
 	service.NewTraeLoginService,
 	bootstrap.NewTraeClient,
 )

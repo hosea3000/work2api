@@ -7,6 +7,7 @@ import type {
   ChatCompletionRequest,
   CodeBuddyPollAuthResponse,
   CredentialRecord,
+  CredentialProvider,
   CredentialQuota,
   CredentialQuotaProbeMode,
   CredentialQuotaProbeModeUpdateResponse,
@@ -73,65 +74,66 @@ export const adminApi = {
     apiRequest<{ deleted: boolean }>(`/api/admin/api-keys/${encodeURIComponent(keyId)}`, {
       method: 'DELETE',
     }),
-  credentials: () => apiRequest<CredentialsResponse>('/api/admin/credentials'),
+  credentials: (provider: CredentialProvider) =>
+    apiRequest<CredentialsResponse>(`/api/admin/${provider}/credentials`),
   createCredential: (bearerToken: string) =>
-    apiRequest<{ credential: CredentialRecord }>('/api/admin/credentials', {
+    apiRequest<{ credential: CredentialRecord }>('/api/admin/codebuddy/credentials', {
       method: 'POST',
       json: { bearer_token: bearerToken },
     }),
-  selectCredential: (credentialId: string) =>
+  selectCredential: (provider: CredentialProvider, credentialId: string) =>
     apiRequest<{
       auto_rotation_disabled_by_select: boolean;
       current: CurrentCredential;
-    }>(`/api/admin/credentials/${encodeURIComponent(credentialId)}/select`, {
+    }>(`/api/admin/${provider}/credentials/${encodeURIComponent(credentialId)}/select`, {
       method: 'POST',
     }),
-  deleteCredential: (credentialId: string) =>
+  deleteCredential: (provider: CredentialProvider, credentialId: string) =>
     apiRequest<DeleteCredentialResponse>(
-      `/api/admin/credentials/${encodeURIComponent(credentialId)}`,
+      `/api/admin/${provider}/credentials/${encodeURIComponent(credentialId)}`,
       {
         method: 'DELETE',
       },
     ),
-  testCredential: (credentialId: string) =>
+  testCredential: (provider: CredentialProvider, credentialId: string) =>
     apiRequest<{
       ok: boolean;
       status_code: number;
       detail?: string;
       model_source?: 'actual' | 'configured_fallback';
-    }>(`/api/admin/credentials/${encodeURIComponent(credentialId)}/test`, {
+    }>(`/api/admin/${provider}/credentials/${encodeURIComponent(credentialId)}/test`, {
       method: 'POST',
       json: {},
       timeoutMs: CREDENTIAL_TEST_TIMEOUT_MS,
     }),
   credentialAccounts: (credentialId: string) =>
     apiRequest<CredentialAccountsResponse>(
-      `/api/admin/credentials/${encodeURIComponent(credentialId)}/accounts`,
+      `/api/admin/codebuddy/credentials/${encodeURIComponent(credentialId)}/accounts`,
     ),
   selectCredentialAccount: (credentialId: string, accountId: string) =>
     apiRequest<{ selected: boolean; credential_id: string; account_id: string }>(
-      `/api/admin/credentials/${encodeURIComponent(credentialId)}/accounts/${encodeURIComponent(accountId)}/select`,
+      `/api/admin/codebuddy/credentials/${encodeURIComponent(credentialId)}/accounts/${encodeURIComponent(accountId)}/select`,
       { method: 'POST', timeoutMs: ACCOUNT_SWITCH_TIMEOUT_MS },
     ),
-  toggleRotation: () =>
+  toggleRotation: (provider: CredentialProvider) =>
     apiRequest<{
       message?: string;
       auto_rotation_enabled: boolean;
       current: CredentialsResponse['current'];
-    }>('/api/admin/credentials/rotation/toggle', { method: 'POST' }),
-  dailyCheckin: (credentialId: string) =>
+    }>(`/api/admin/${provider}/credentials/rotation/toggle`, { method: 'POST' }),
+  dailyCheckin: (provider: CredentialProvider, credentialId: string) =>
     apiRequest<CredentialDailyCheckin>(
-      `/api/admin/credentials/${encodeURIComponent(credentialId)}/daily-checkin`,
+      `/api/admin/${provider}/credentials/${encodeURIComponent(credentialId)}/daily-checkin`,
       { method: 'POST', timeoutMs: DAILY_CHECKIN_TIMEOUT_MS },
     ),
   refreshCredentialQuota: (credentialId: string) =>
     apiRequest<{ quota: CredentialQuota }>(
-      `/api/admin/credentials/${encodeURIComponent(credentialId)}/quota/refresh`,
+      `/api/admin/codebuddy/credentials/${encodeURIComponent(credentialId)}/quota/refresh`,
       { method: 'POST', timeoutMs: QUOTA_PROBE_TIMEOUT_MS },
     ),
   updateCredentialQuotaProbeMode: (credentialId: string, mode: CredentialQuotaProbeMode) =>
     apiRequest<CredentialQuotaProbeModeUpdateResponse>(
-      `/api/admin/credentials/${encodeURIComponent(credentialId)}/quota-probe-mode`,
+      `/api/admin/codebuddy/credentials/${encodeURIComponent(credentialId)}/quota-probe-mode`,
       {
         method: 'PUT',
         json: { mode },

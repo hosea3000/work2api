@@ -29,11 +29,11 @@ TBD - created by archiving change bootstrap-codebuddy-gateway-core. Update Purpo
 所有 `/api/admin/*` 端点 MUST 要求有效会话 Cookie；未登录返回 401。`sk-` API Key MUST NOT 能访问管理端点，反之会话 Cookie MUST NOT 能访问外部 API 端点（两套鉴权严格隔离）。
 
 #### Scenario: 未登录访问管理端点
-- **WHEN** 无会话 Cookie 请求 `GET /api/admin/credentials`
+- **WHEN** 无会话 Cookie 请求 `GET /api/admin/codebuddy/credentials`
 - **THEN** 返回 401
 
 #### Scenario: API Key 不能访问管理端点
-- **WHEN** 请求 `GET /api/admin/credentials` 携带 `Authorization: Bearer sk-...`
+- **WHEN** 请求 `GET /api/admin/codebuddy/credentials` 携带 `Authorization: Bearer sk-...`
 - **THEN** 返回 401
 
 ### Requirement: 登录暴力破解防护

@@ -5,7 +5,7 @@ export function adminQueryKeys(username: string) {
   return {
     all: root,
     status: [...root, 'status'] as const,
-    credentials: [...root, 'credentials'] as const,
+    credentials: (provider: string) => [...root, 'credentials', provider] as const,
     apiKeys: [...root, 'api-keys'] as const,
     settings: [...root, 'settings'] as const,
     playgroundModels: (protocol: 'openai' | 'anthropic') =>
