@@ -49,3 +49,11 @@ func NewHTTPServer(
 
 	return s
 }
+
+// NewTraeCallbackServerFromDeps 从统一 deps 构造 TRAE 回调监听器。
+func NewTraeCallbackServerFromDeps(
+	deps router.RouterDeps,
+	traeAuth *handler.TraeAuthHandler,
+) *TraeCallbackServer {
+	return NewTraeCallbackServer(deps.Config.GetInt("trae.callback_port"), traeAuth.Authorize, deps.Logger)
+}

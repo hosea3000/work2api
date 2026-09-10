@@ -32,6 +32,8 @@ interface Props {
   isRefreshingQuota?: boolean;
   canEditQuotaProbeMode?: boolean;
   quotaProbeModeDisabledReason?: string;
+  /** trae 凭证不参与 codebuddy 调度（选择/测试/签到），二期开放。 */
+  isSchedulable?: boolean;
 }
 
 interface MenuItem {
@@ -57,6 +59,7 @@ const props = withDefaults(defineProps<Props>(), {
   isRefreshingQuota: false,
   canEditQuotaProbeMode: false,
   quotaProbeModeDisabledReason: '',
+  isSchedulable: true,
 });
 
 const emit = defineEmits<{
@@ -79,10 +82,15 @@ const rowBusy = computed(() => props.isCheckingIn || props.isRefreshingQuota || 
 const actionsBlocked = computed(
   () => props.writeInProgress || props.hasActiveTests || rowBusy.value,
 );
-const selectDisabled = computed(() => isFixedCurrent.value || actionsBlocked.value);
-const testDisabled = computed(() => props.isTesting || props.writeInProgress || rowBusy.value);
+const selectDisabled = computed(
+  () => !props.isSchedulable || isFixedCurrent.value || actionsBlocked.value,
+);
+const testDisabled = computed(
+  () => !props.isSchedulable || props.isTesting || props.writeInProgress || rowBusy.value,
+);
 const checkinDisabled = computed(
   () =>
+    !props.isSchedulable ||
     actionsBlocked.value ||
     Boolean(props.checkinDisabledReason) ||
     props.credential.daily_checkin?.success === true,

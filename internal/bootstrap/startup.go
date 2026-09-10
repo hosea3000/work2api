@@ -9,8 +9,13 @@ import (
 	"github.com/yourname/work2api/pkg/log"
 )
 
-// Startup 服务启动钩子：建管理员、加载凭证池。
+// Startup 服务启动钩子：补齐 credential 新列、建管理员、加载凭证池。
 func Startup(ctx context.Context, conf *config.CodeBuddyConfig, repo repository.GatewayRepository, sessions service.SessionService, creds service.CredentialService, logger *log.Logger) error {
+	// 幂等迁移：存量库补 provider/machine_id/device_id 列（AutoMigrate 仅在 cmd/migration 中执行）
+	if err := repo.MigrateCredentialColumns(ctx); err != nil {
+		return err
+	}
+	logger.Info("credential columns migration ok")
 	if err := sessions.BootstrapIfEmpty(ctx, conf.AdminUsername, conf.AdminPassword); err != nil {
 		return err
 	}

@@ -26,6 +26,8 @@ import type {
   StatsRequestRecord,
   StatsRequestsQuery,
   StatsRequestsResponse,
+  TraeLoginStartResponse,
+  TraeLoginResultResponse,
 } from '../types';
 import { buildStatsSearchParams } from '../utils/stats';
 
@@ -202,6 +204,29 @@ export const codebuddyOAuthApi = {
     }
     return apiRequest<{ cancelled: true }>('/codebuddy/auth/cancel', options);
   },
+};
+
+export const traeLoginApi = {
+  start: (signal?: AbortSignal) =>
+    apiRequest<TraeLoginStartResponse>('/api/admin/trae/login/start', {
+      method: 'POST',
+      signal,
+    }),
+  result: (pendingId: string, signal?: AbortSignal) =>
+    apiRequest<TraeLoginResultResponse>(
+      `/api/admin/trae/login/result?pending_id=${encodeURIComponent(pendingId)}`,
+      { signal },
+    ),
+  cancel: (pendingId: string) =>
+    apiRequest<{ cancelled: boolean }>('/api/admin/trae/login/cancel', {
+      method: 'POST',
+      json: { pending_id: pendingId },
+    }),
+  import: (callbackUrl: string) =>
+    apiRequest<{ success: boolean }>('/api/admin/trae/login/import', {
+      method: 'POST',
+      json: { callback_url: callbackUrl },
+    }),
 };
 
 export const openaiPlaygroundApi = {

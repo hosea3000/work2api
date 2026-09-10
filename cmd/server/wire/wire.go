@@ -55,9 +55,12 @@ var handlerSet = wire.NewSet(
 	handler.NewOpenAIHandler,
 	handler.NewAdminStubHandler,
 	handler.NewCodeBuddyAuthHandler,
+	handler.NewTraeAuthHandler,
 	service.NewAuthStateStore,
 	service.NewOAuthService,
 	service.NewTokenRefreshService,
+	service.NewTraeLoginService,
+	bootstrap.NewTraeClient,
 )
 
 var jobSet = wire.NewSet(
@@ -69,6 +72,7 @@ var serverSet = wire.NewSet(
 	server.NewHTTPServer,
 	server.NewJobServer,
 	server.NewCheckinJobServer,
+	server.NewTraeCallbackServerFromDeps,
 )
 
 // build App
@@ -76,9 +80,10 @@ func newApp(
 	httpServer *http.Server,
 	jobServer *server.JobServer,
 	checkinServer *server.CheckinJobServer,
+	traeCallbackServer *server.TraeCallbackServer,
 ) *app.App {
 	return app.NewApp(
-		app.WithServer(httpServer, jobServer, checkinServer),
+		app.WithServer(httpServer, jobServer, checkinServer, traeCallbackServer),
 		app.WithName("work2api"),
 	)
 }

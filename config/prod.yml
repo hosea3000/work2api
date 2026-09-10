@@ -36,4 +36,5 @@ log:
   max_backups: 30
   max_age: 7
   max_size: 1024
-  compress: true
+  compress: truetrae:
+  callback_port: 18080             # TRAE 登录回调监听端口（远程部署需映射此端口才能自动捕获）

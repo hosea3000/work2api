@@ -250,7 +250,8 @@ export interface CredentialRecord {
   account_type?: string;
   account_id?: string;
   account_count?: number;
-  auth_source?: 'oauth' | 'manual' | 'unknown';
+  auth_source?: 'oauth' | 'manual' | 'unknown' | 'web_login';
+  provider?: 'codebuddy' | 'trae';
   can_edit_quota_probe_mode?: boolean;
   has_refresh_token: boolean;
   has_token: boolean;
@@ -339,4 +340,23 @@ export interface SettingsResponse {
   settings: Record<string, string | number | boolean | null>;
   fields: SettingField[];
   message?: string;
+}
+
+/** TRAE 网页登录 start 响应。 */
+export interface TraeLoginStartResponse {
+  success: boolean;
+  login_url: string;
+  pending_id: string;
+  callback_url: string;
+  expires_in: number;
+  instructions?: string;
+}
+
+/** TRAE 网页登录 result 轮询响应。 */
+export interface TraeLoginResultResponse {
+  pending_id: string;
+  state: 'pending' | 'success' | 'failed' | 'canceled';
+  uid?: string;
+  nickname?: string;
+  error?: string;
 }

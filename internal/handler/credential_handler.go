@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -39,6 +40,7 @@ func (h *CredentialHandler) List(c *gin.Context) {
 			"is_expired":         v.Status != "active",
 			"token_type":         "Bearer",
 			"auth_source":        v.AuthSource,
+			"provider":           v.Provider,
 			"enterprise_id":      v.Enterprise,
 			"has_refresh_token":  false,
 			"has_token":          true,
@@ -114,6 +116,10 @@ func (h *CredentialHandler) Select(c *gin.Context) {
 	id := c.Param("credential_id")
 	cred, disabled, err := h.creds.Select(c.Request.Context(), id)
 	if err != nil {
+		if errors.Is(err, service.ErrNotSchedulable) {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": "该凭证不参与 CodeBuddy 调度"})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"detail": "选择凭证失败"})
 		return
 	}
@@ -164,8 +170,7 @@ func (h *CredentialHandler) DailyCheckin(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"detail": "签到请求失败"})
 		return
-	}
-	// 对齐 CredentialDailyCheckin
+	}	// 对齐 CredentialDailyCheckin
 	resp := gin.H{
 		"code":    nil,
 		"message": detail["message"],

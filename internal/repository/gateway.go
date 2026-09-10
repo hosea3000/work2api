@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/yourname/work2api/internal/model"
@@ -17,8 +18,10 @@ type GatewayRepository interface {
 
 	// credentials
 	ListCredentials(ctx context.Context) ([]model.Credential, error)
+	MigrateCredentialColumns(ctx context.Context) error
 	GetCredential(ctx context.Context, id string) (*model.Credential, error)
 	GetCredentialByUserId(ctx context.Context, userId string) (*model.Credential, error)
+	GetCredentialByAccountUid(ctx context.Context, accountUid string) (*model.Credential, error)
 	CreateCredential(ctx context.Context, c *model.Credential) error
 	UpdateCredential(ctx context.Context, c *model.Credential) error
 	DeleteCredential(ctx context.Context, id string) error
@@ -71,6 +74,36 @@ func (r *gatewayRepository) ListCredentials(ctx context.Context) ([]model.Creden
 	return list, err
 }
 
+// MigrateCredentialColumns 幂等补齐 credential 表新增列（provider/machine_id/device_id）。
+// 独立迁移进程（cmd/migration）之外的常规启动也会执行，兼容存量库。
+func (r *gatewayRepository) MigrateCredentialColumns(ctx context.Context) error {
+	cols := map[string]string{
+		"provider":   "TEXT NOT NULL DEFAULT 'codebuddy'",
+		"machine_id": "TEXT",
+		"device_id":  "TEXT",
+	}
+	for name, def := range cols {
+		var count int64
+		err := r.DB(ctx).Raw(
+			"SELECT count(*) FROM pragma_table_info('credential') WHERE name = ?", name,
+		).Scan(&count).Error
+		if err != nil {
+			return err
+		}
+		if count == 0 {
+			if err := r.DB(ctx).Exec(
+				fmt.Sprintf("ALTER TABLE credential ADD COLUMN %s %s", name, def),
+			).Error; err != nil {
+				return err
+			}
+		}
+	}
+	// provider 列的索引（IF NOT EXISTS 语义，SQLite 支持）
+	return r.DB(ctx).Exec(
+		"CREATE INDEX IF NOT EXISTS idx_credential_provider ON credential(provider)",
+	).Error
+}
+
 func (r *gatewayRepository) GetCredential(ctx context.Context, id string) (*model.Credential, error) {
 	var c model.Credential
 	err := r.DB(ctx).Where("id = ?", id).First(&c).Error
@@ -86,6 +119,20 @@ func (r *gatewayRepository) GetCredential(ctx context.Context, id string) (*mode
 func (r *gatewayRepository) GetCredentialByUserId(ctx context.Context, userId string) (*model.Credential, error) {
 	var c model.Credential
 	err := r.DB(ctx).Where("user_id = ?", userId).First(&c).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// GetCredentialByAccountUid 按上游账号 uid 查凭证（存量 oauth 记录的 user_id 是
+// token 哈希，重认证去重需回退按 account_uid 列匹配）。
+func (r *gatewayRepository) GetCredentialByAccountUid(ctx context.Context, accountUid string) (*model.Credential, error) {
+	var c model.Credential
+	err := r.DB(ctx).Where("account_uid = ?", accountUid).Order("created_at DESC").First(&c).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

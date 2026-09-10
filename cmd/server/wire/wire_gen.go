@@ -59,6 +59,9 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	authStateStore := service.NewAuthStateStore()
 	oAuthService := service.NewOAuthService(client, credentialService, modelsService, authStateStore)
 	codeBuddyAuthHandler := handler.NewCodeBuddyAuthHandler(handlerHandler, oAuthService)
+	traeClient := bootstrap.NewTraeClient()
+	traeLoginService := service.NewTraeLoginService(gatewayRepository, credentialService, traeClient, credentialPool, codeBuddyConfig)
+	traeAuthHandler := handler.NewTraeAuthHandler(handlerHandler, traeLoginService)
 	routerDeps := router.RouterDeps{
 		Logger:               logger,
 		Config:               viperViper,
@@ -70,6 +73,7 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 		OpenAIHandler:        openAIHandler,
 		AdminStubHandler:     adminStubHandler,
 		CodeBuddyAuthHandler: codeBuddyAuthHandler,
+		TraeAuthHandler:      traeAuthHandler,
 		SessionService:       sessionService,
 		APIKeyService:        apiKeyService,
 	}
@@ -80,7 +84,8 @@ func NewWire(viperViper *viper.Viper, logger *log.Logger) (*app.App, func(), err
 	checkinJob := job.NewCheckinJob(checkinService, codeBuddyConfig)
 	tokenRefreshService := service.NewTokenRefreshService(credentialService, client)
 	checkinJobServer := server.NewCheckinJobServer(logger, checkinJob, codeBuddyConfig, gatewayRepository, sessionService, credentialService, tokenRefreshService)
-	appApp := newApp(httpServer, jobServer, checkinJobServer)
+	traeCallbackServer := server.NewTraeCallbackServerFromDeps(routerDeps, traeAuthHandler)
+	appApp := newApp(httpServer, jobServer, checkinJobServer, traeCallbackServer)
 	return appApp, func() {
 	}, nil
 }
@@ -91,17 +96,18 @@ var repositorySet = wire.NewSet(repository.NewDB, repository.NewRepository, repo
 
 var serviceSet = wire.NewSet(service.NewService, service.NewUserService, config.LoadCodeBuddyConfig, bootstrap.NewCodeBuddyClient, bootstrap.NewRequestPolicies, bootstrap.NewModelsServiceFromConfig, service.NewCredentialPool, service.NewCredentialService, service.NewAPIKeyService, service.NewSessionService, service.NewCheckinService, service.NewChatExecutor)
 
-var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewAuthHandler, handler.NewAPIKeyHandler, handler.NewCredentialHandler, handler.NewOpenAIHandler, handler.NewAdminStubHandler, handler.NewCodeBuddyAuthHandler, service.NewAuthStateStore, service.NewOAuthService, service.NewTokenRefreshService)
+var handlerSet = wire.NewSet(handler.NewHandler, handler.NewUserHandler, handler.NewAuthHandler, handler.NewAPIKeyHandler, handler.NewCredentialHandler, handler.NewOpenAIHandler, handler.NewAdminStubHandler, handler.NewCodeBuddyAuthHandler, handler.NewTraeAuthHandler, service.NewAuthStateStore, service.NewOAuthService, service.NewTokenRefreshService, service.NewTraeLoginService, bootstrap.NewTraeClient)
 
 var jobSet = wire.NewSet(job.NewJob, job.NewUserJob, job.NewCheckinJob)
 
-var serverSet = wire.NewSet(server.NewHTTPServer, server.NewJobServer, server.NewCheckinJobServer)
+var serverSet = wire.NewSet(server.NewHTTPServer, server.NewJobServer, server.NewCheckinJobServer, server.NewTraeCallbackServerFromDeps)
 
 // build App
 func newApp(
 	httpServer *http.Server,
 	jobServer *server.JobServer,
 	checkinServer *server.CheckinJobServer,
+	traeCallbackServer *server.TraeCallbackServer,
 ) *app.App {
-	return app.NewApp(app.WithServer(httpServer, jobServer, checkinServer), app.WithName("work2api"))
+	return app.NewApp(app.WithServer(httpServer, jobServer, checkinServer, traeCallbackServer), app.WithName("work2api"))
 }

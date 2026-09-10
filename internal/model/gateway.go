@@ -25,8 +25,12 @@ type Credential struct {
 	EnterpriseId       *string `gorm:"size:128"`
 	DepartmentFullName *string `gorm:"size:512"`
 	AuthSource         string  `gorm:"size:16;not null;default:manual"`
-	Status             string  `gorm:"size:16;not null;default:active;index"` // active | expired | disabled
-	ExpiresAt          *int64
+	Provider           string  `gorm:"size:16;not null;default:codebuddy;index"` // codebuddy | trae
+	Status             string  `gorm:"size:16;not null;default:active;index"`    // active | expired | disabled
+	// TRAE 专用列（网页登录时生成的设备标识，登录态与凭证绑定）
+	MachineID *string `gorm:"size:64"`
+	DeviceID  *string `gorm:"size:64"`
+	ExpiresAt *int64
 	// OAuth 扩展列（manual 凭证为 NULL）
 	RefreshToken     *string `gorm:"type:text"`
 	RefreshExpiresAt *int64

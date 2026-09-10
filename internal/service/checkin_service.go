@@ -50,6 +50,9 @@ func (s *checkinService) ManualCheckin(ctx context.Context, credentialId string)
 	if err != nil || cred == nil {
 		return nil, fmt.Errorf("credential not found")
 	}
+	if !isCodebuddy(*cred) {
+		return nil, fmt.Errorf("credential provider does not support checkin")
+	}
 	entry := toPoolEntry(*cred)
 	detail := s.performCheckin(ctx, credentialId, entry.Snapshot)
 	return map[string]any{
@@ -126,8 +129,8 @@ func (s *checkinService) RunScheduledCheckin(ctx context.Context) {
 	today := localDate(time.Now())
 	checkedIn := 0
 	for _, view := range list {
-		if view.Status != "active" {
-			continue
+		if view.Status != "active" || !isCodebuddyView(view) {
+			continue // TRAE 凭证不参与 codebuddy 签到（trae 签到接口二期接入）
 		}
 		cred, err := s.creds.GetByID(ctx, view.Id)
 		if err != nil || cred == nil {

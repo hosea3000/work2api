@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watch } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
-import { Copy, ExternalLink, Pause, Play, Plus } from '@lucide/vue';
+import { Copy, ExternalLink, Pause, Play } from '@lucide/vue';
 import CAlert from '../components/ui/CAlert.vue';
 import CButton from '../components/ui/CButton.vue';
 import CCard from '../components/ui/CCard.vue';
 import CDataTable, { type Column } from '../components/ui/CDataTable.vue';
-import CForm, { type FormRules } from '../components/ui/CForm.vue';
-import CFormItem from '../components/ui/CFormItem.vue';
 import CInput from '../components/ui/CInput.vue';
 import CRadioGroup from '../components/ui/CRadioGroup.vue';
 import CRadioButton from '../components/ui/CRadioButton.vue';
 import CTag from '../components/ui/CTag.vue';
-import { adminApi } from '../api/admin';
+import { adminApi, traeLoginApi } from '../api/admin';
 import type { CredentialRecord, CredentialsResponse } from '../types';
 import { useOAuthPolling } from '../composables/useOAuthPolling';
 import { useClipboard } from '../composables/useClipboard';
@@ -31,17 +29,6 @@ const session = useSessionStore();
 const queryKeys = adminQueryKeys(session.username);
 const toast = useToast();
 const { copy } = useClipboard();
-
-const credentialForm = reactive({ bearerToken: '' });
-const credentialFormRef = ref<InstanceType<typeof CForm> | null>(null);
-const credentialRules: FormRules = {
-  bearerToken: {
-    required: true,
-    whitespace: true,
-    message: '请输入 Bearer Token',
-    trigger: 'input',
-  },
-};
 
 const testingIds = reactive(new Set<string>());
 const checkingInIds = reactive(new Set<string>());
@@ -154,15 +141,124 @@ const {
 });
 const authInProgress = computed(() => starting.value || polling.value);
 
-const createMutation = useMutation({
-  mutationFn: () => adminApi.createCredential(credentialForm.bearerToken),
-  onSuccess: async () => {
-    credentialForm.bearerToken = '';
-    credentialFormRef.value?.restoreValidation();
-    toast.success('凭证已添加');
+/* ─── TRAE 网页登录（对齐 trae2api-web 添加账号闭环） ─── */
+const traeStarting = ref(false);
+const traePolling = ref(false);
+const traeElapsedSeconds = ref(0);
+const traeLoginUrl = ref('');
+const traePendingId = ref('');
+const traePollTimer = ref<ReturnType<typeof setInterval> | null>(null);
+const traeImportUrl = ref('');
+const traeImporting = ref(false);
+const TRAE_POLL_INTERVAL_MS = 2000;
+const TRAE_POLL_MAX_SECONDS = 180;
+
+const traeInProgress = computed(() => traeStarting.value || traePolling.value);
+
+function stopTraePolling(): void {
+  if (traePollTimer.value) {
+    clearInterval(traePollTimer.value);
+    traePollTimer.value = null;
+  }
+}
+
+async function invalidateCredentials() {
+  await queryClient.invalidateQueries({ queryKey: queryKeys.credentials });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.status });
+}
+
+async function startTraeLogin(): Promise<void> {
+  if (writeInProgress.value || traeInProgress.value) return;
+  traeStarting.value = true;
+  try {
+    const res = await traeLoginApi.start();
+    traeLoginUrl.value = res.login_url;
+    traePendingId.value = res.pending_id;
+    traePolling.value = true;
+    traeElapsedSeconds.value = 0;
+    window.open(res.login_url, '_blank');
+    stopTraePolling();
+    traePollTimer.value = setInterval(pollTraeResult, TRAE_POLL_INTERVAL_MS);
+  } catch (err) {
+    toast.error(`生成登录链接失败：${err instanceof Error ? err.message : '未知错误'}`);
+  } finally {
+    traeStarting.value = false;
+  }
+}
+
+async function pollTraeResult(): Promise<void> {
+  traeElapsedSeconds.value += TRAE_POLL_INTERVAL_MS / 1000;
+  if (traeElapsedSeconds.value > TRAE_POLL_MAX_SECONDS) {
+    stopTraePolling();
+    traePolling.value = false;
+    toast.error('登录超时（3 分钟），请重试');
+    return;
+  }
+  try {
+    const res = await traeLoginApi.result(traePendingId.value);
+    if (res.state === 'success') {
+      stopTraePolling();
+      traePolling.value = false;
+      traePendingId.value = '';
+      toast.success(`TRAE 账号已添加：${res.nickname || res.uid || ''}`);
+      await invalidateCredentials();
+    } else if (res.state === 'failed') {
+      stopTraePolling();
+      traePolling.value = false;
+      traePendingId.value = '';
+      toast.error(`登录失败：${res.error || '未知错误'}`);
+    }
+  } catch {
+    // 404（过期/无效）或瞬时错误：停止轮询，提示重试
+    stopTraePolling();
+    traePolling.value = false;
+    traePendingId.value = '';
+  }
+}
+
+async function cancelTraeLogin(): Promise<void> {
+  stopTraePolling();
+  traePolling.value = false;
+  const pendingId = traePendingId.value;
+  traePendingId.value = '';
+  if (pendingId) {
+    try {
+      await traeLoginApi.cancel(pendingId);
+    } catch {
+      // 取消失败不影响状态重置
+    }
+  }
+}
+
+function openTraeLoginUrl(): void {
+  if (traeLoginUrl.value) window.open(traeLoginUrl.value, '_blank');
+}
+
+async function copyTraeLoginUrl(): Promise<void> {
+  if (!traeLoginUrl.value) return;
+  try {
+    await copy(traeLoginUrl.value);
+    toast.success('登录链接已复制');
+  } catch {
+    toast.error('复制失败');
+  }
+}
+
+async function importTraeCallback(): Promise<void> {
+  const url = traeImportUrl.value.trim();
+  if (!url || traeImporting.value) return;
+  traeImporting.value = true;
+  try {
+    await traeLoginApi.import(url);
+    traeImportUrl.value = '';
+    toast.success('TRAE 凭证已导入');
     await invalidateCredentials();
-  },
-});
+  } catch (err) {
+    toast.error(`导入失败：${err instanceof Error ? err.message : '回调 URL 无效'}`);
+  } finally {
+    traeImporting.value = false;
+  }
+}
 
 const selectMutation = useMutation({
   mutationFn: adminApi.selectCredential,
@@ -280,7 +376,6 @@ const writeInProgress = computed(
   () =>
     selectingId.value !== null ||
     deletingId.value !== null ||
-    createMutation.isPending.value ||
     toggleRotationMutation.isPending.value ||
     accountSwitching.value ||
     quotaProbeModeUpdating.value ||
@@ -288,25 +383,10 @@ const writeInProgress = computed(
     Boolean(quotaProbeModeCredentialId.value),
 );
 
-async function invalidateCredentials() {
-  await queryClient.invalidateQueries({ queryKey: queryKeys.credentials });
-  await queryClient.invalidateQueries({ queryKey: queryKeys.status });
-}
-
 function formatElapsed(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-async function submitCredential(): Promise<void> {
-  if (writeInProgress.value || hasActiveTests.value) return;
-  try {
-    await credentialFormRef.value?.validate();
-  } catch {
-    return;
-  }
-  createMutation.mutate();
 }
 
 function start(): void {
@@ -404,6 +484,17 @@ const columns: Column<CredentialRecord>[] = [
     },
   },
   { title: 'Token', key: 'token_display', minWidth: 180, className: 'mono' },
+  {
+    title: '平台',
+    key: 'provider',
+    width: 92,
+    render: (row) =>
+      h(
+        CTag,
+        { type: row.provider === 'trae' ? 'brand' : 'default' },
+        { default: () => (row.provider === 'trae' ? 'TRAE' : 'CodeBuddy') },
+      ),
+  },
   { title: '剩余', key: 'time_remaining_str', width: 120 },
   {
     title: '额度',
@@ -429,6 +520,7 @@ const columns: Column<CredentialRecord>[] = [
         isDeleting: deletingId.value === row.credential_id,
         writeInProgress: writeInProgress.value,
         hasActiveTests: hasActiveTests.value,
+        isSchedulable: row.provider !== 'trae',
         canSwitchAccount: Boolean(row.has_refresh_token && (row.account_count || 0) > 1),
         canCheckIn: !row.is_expired && !row.enterprise_id,
         isCheckingIn: checkingInIds.has(row.credential_id),
@@ -461,7 +553,7 @@ const tableRows = computed(() => rows.value as unknown as Record<string, unknown
 <template>
   <div class="section-grid">
     <div
-      class="grid split-grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]"
+      class="grid split-grid grid-cols-1 gap-4 lg:grid-cols-2"
     >
       <CCard title="CodeBuddy 登录认证" class="credential-auth-card">
         <div class="credential-auth-card-content flex flex-col gap-3">
@@ -514,34 +606,67 @@ const tableRows = computed(() => rows.value as unknown as Record<string, unknown
         </div>
       </CCard>
 
-      <CCard title="手动添加">
-        <CForm
-          ref="credentialFormRef"
-          :model="credentialForm"
-          :rules="credentialRules"
-          label-placement="top"
-        >
-          <div class="credential-manual-form-fields flex flex-col gap-0">
-            <CFormItem path="bearerToken">
-              <CInput
-                v-model="credentialForm.bearerToken"
-                type="password"
-                placeholder="Bearer Token"
-              />
-            </CFormItem>
+      <CCard title="TRAE 登录" class="credential-auth-card">
+        <div class="credential-auth-card-content flex flex-col gap-3">
+          <div v-if="!traeInProgress" class="credential-auth-idle flex flex-col gap-3">
+            <p class="text-sm opacity-70">
+              跳转到 TRAE 官网完成登录，凭证会自动导入凭证池。
+            </p>
             <CButton
               variant="primary"
-              :loading="createMutation.isPending.value"
+              :loading="traeStarting"
               :disabled="writeInProgress || hasActiveTests"
-              @click="submitCredential"
+              class="credential-auth-start-button"
+              @click="startTraeLogin"
             >
               <template #icon>
-                <Plus :size="16" />
+                <ExternalLink :size="16" />
               </template>
-              添加
+              添加账号（TRAE 登录）
             </CButton>
           </div>
-        </CForm>
+          <div v-else class="credential-auth-pending flex flex-col gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <CTag type="warning">等待 TRAE 登录</CTag>
+              <CTag type="warning">已等待 {{ formatElapsed(traeElapsedSeconds) }}</CTag>
+            </div>
+            <CAlert type="info">
+              请在打开的 TRAE 登录页完成登录；若浏览器提示回调连接失败（远程部署），
+              可复制地址栏完整 URL 在下方粘贴导入。
+            </CAlert>
+            <div class="flex flex-wrap items-center gap-2">
+              <CButton :disabled="!traeLoginUrl" @click="openTraeLoginUrl">
+                <template #icon>
+                  <ExternalLink :size="16" />
+                </template>
+                打开登录页
+              </CButton>
+              <CButton :disabled="!traeLoginUrl" @click="copyTraeLoginUrl">
+                <template #icon>
+                  <Copy :size="16" />
+                </template>
+                复制链接
+              </CButton>
+              <CButton @click="cancelTraeLogin">取消登录</CButton>
+            </div>
+          </div>
+          <div class="mt-2 border-t border-current/10 pt-3">
+            <p class="mb-2 text-sm opacity-70">回调未自动到达？粘贴地址栏完整回调 URL：</p>
+            <CInput
+              v-model="traeImportUrl"
+              type="password"
+              placeholder="http://127.0.0.1:18080/authorize?refreshToken=..."
+            />
+            <CButton
+              class="mt-2"
+              :loading="traeImporting"
+              :disabled="!traeImportUrl.trim()"
+              @click="importTraeCallback"
+            >
+              导入
+            </CButton>
+          </div>
+        </div>
       </CCard>
     </div>
 

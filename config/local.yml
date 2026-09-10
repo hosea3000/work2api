@@ -43,6 +43,8 @@ codebuddy:
   models_cache_ttl_seconds: 30
   admin_username: admin
   admin_password: admin123         # 仅用于首启动建户
+trae:
+  callback_port: 18080             # TRAE 登录回调监听端口（本机部署用自动捕获，远程用粘贴导入）
 log:
   log_level: debug
   mode: both               #  file or console or both

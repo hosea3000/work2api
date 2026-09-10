@@ -23,6 +23,7 @@ var (
 	ErrCredentialNotFound = errors.New("credential not found")
 	ErrInvalidToken       = errors.New("invalid bearer token")
 	ErrNoCredential       = errors.New("no available codebuddy credential")
+	ErrNotSchedulable     = errors.New("credential provider does not participate in codebuddy scheduling")
 )
 
 // CredentialService 凭证管理服务。
@@ -64,6 +65,7 @@ type CredentialView struct {
 	TokenSuffix string  `json:"token_suffix"`
 	Status      string  `json:"status"`
 	AuthSource  string  `json:"auth_source"`
+	Provider    string  `json:"provider"`
 	Enterprise  *string `json:"enterprise_id,omitempty"`
 	CreatedAt   string  `json:"created_at"`
 	ExpiresAt   *int64  `json:"expires_at,omitempty"`
@@ -74,12 +76,17 @@ type CredentialView struct {
 }
 
 func (s *credentialService) view(c model.Credential) CredentialView {
+	provider := c.Provider
+	if provider == "" {
+		provider = "codebuddy"
+	}
 	return CredentialView{
 		Id:          c.Id,
 		UserId:      c.UserId,
 		TokenSuffix: tokenSuffix(c.BearerToken),
 		Status:      c.Status,
 		AuthSource:  c.AuthSource,
+		Provider:    provider,
 		Enterprise:  c.EnterpriseId,
 		CreatedAt:   c.CreatedAt.Format(time.RFC3339),
 		ExpiresAt:   c.ExpiresAt,
@@ -181,7 +188,7 @@ func (s *credentialService) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// Select 手动选择当前凭证；选择后关闭自动轮换。
+// Select 手动选择当前凭证；选择后关闭自动轮换。仅 codebuddy 凭证可参与调度。
 func (s *credentialService) Select(ctx context.Context, id string) (*CredentialView, bool, error) {
 	cred, err := s.repo.GetCredential(ctx, id)
 	if err != nil {
@@ -189,6 +196,9 @@ func (s *credentialService) Select(ctx context.Context, id string) (*CredentialV
 	}
 	if cred == nil {
 		return nil, false, ErrCredentialNotFound
+	}
+	if !isCodebuddy(*cred) {
+		return nil, false, ErrNotSchedulable
 	}
 	if cred.Status != "active" {
 		return nil, false, ErrNoCredential
@@ -230,11 +240,14 @@ func (s *credentialService) RotationEnabled() bool {
 	return s.pool.AutoRotationEnabled()
 }
 
-// Test 用凭证请求上游模型列表做连通性测试。
+// Test 用凭证请求上游模型列表做连通性测试（仅 codebuddy，trae 二期）。
 func (s *credentialService) Test(ctx context.Context, id string) (bool, int, string) {
 	cred, err := s.repo.GetCredential(ctx, id)
 	if err != nil || cred == nil {
 		return false, 404, "credential not found"
+	}
+	if !isCodebuddy(*cred) {
+		return false, 400, "not_supported_for_provider"
 	}
 	entry := toPoolEntry(*cred)
 	models, err := s.upstream.FetchModels(ctx, entry.Snapshot)
@@ -296,7 +309,10 @@ func (s *credentialService) AddOAuth(ctx context.Context, td *codebuddy.TokenDat
 	cred := &model.Credential{
 		Id:               uuid.NewString(),
 		BearerToken:      td.AccessToken,
-		UserId:           "oauth_" + shortHash(td.AccessToken),
+		// user_id 用稳定标识 uid_<account_uid>（替代 token 哈希）：
+		// token 每次刷新都变，哈希派生的 user_id 会导致同账号无法识别。
+		// account_uid 缺失时退回 token 哈希（无去重能力，与旧行为一致）。
+		UserId:           oauthUserID(td, account),
 		AuthSource:       "oauth",
 		Status:           "active",
 		ExpiresAt:        td.ExpiresAt,
@@ -324,6 +340,20 @@ func (s *credentialService) AddOAuth(ctx context.Context, td *codebuddy.TokenDat
 		} else if account.EnterpriseID != "" {
 			cred.EnterpriseId = &account.EnterpriseID
 		}
+		// 同账号去重：以稳定的 account_uid 匹配既有凭证（user_id 派生自 token，
+		// 每次登录都变，不能用于识别同一账号）。先按新规范 key 查，再按
+		// account_uid 列兜底（兼容 user_id 仍为旧 token 哈希格式的存量记录）。
+		if account.UID != "" {
+			var existing *model.Credential
+			if e, err := s.repo.GetCredentialByUserId(ctx, "uid_"+account.UID); err == nil && e != nil {
+				existing = e
+			} else if e, err := s.repo.GetCredentialByAccountUid(ctx, account.UID); err == nil && e != nil && e.Provider != "trae" {
+				existing = e
+			}
+			if existing != nil && existing.Provider != "trae" {
+				return s.updateExistingOAuth(ctx, existing, cred)
+			}
+		}
 	}
 	applyJWTIdentity(cred, td.AccessToken)
 	if err := s.repo.CreateCredential(ctx, cred); err != nil {
@@ -331,6 +361,30 @@ func (s *credentialService) AddOAuth(ctx context.Context, td *codebuddy.TokenDat
 	}
 	s.refreshPool(ctx)
 	v := s.view(*cred)
+	return &v, nil
+}
+
+// updateExistingOAuth 同账号重新认证：原位更新既有凭证并刷新内存池。
+// cred 仅携带新值（其 user_id 派生自新 token，不回写）。
+func (s *credentialService) updateExistingOAuth(ctx context.Context, existing, cred *model.Credential) (*CredentialView, error) {
+	existing.BearerToken = cred.BearerToken
+	existing.Status = "active" // 重新认证视为复活
+	existing.ExpiresAt = cred.ExpiresAt
+	existing.ExpiresIn = cred.ExpiresIn
+	existing.RefreshToken = cred.RefreshToken
+	existing.RefreshExpiresAt = cred.RefreshExpiresAt
+	existing.SessionState = cred.SessionState
+	existing.Scope = cred.Scope
+	existing.AccountUid = cred.AccountUid
+	existing.Domain = cred.Domain
+	existing.EnterpriseId = cred.EnterpriseId
+	// 展示字段可能随新 token 变化（JWT 身份重解析）
+	applyJWTIdentity(existing, cred.BearerToken)
+	if err := s.repo.UpdateCredential(ctx, existing); err != nil {
+		return nil, err
+	}
+	s.refreshPool(ctx)
+	v := s.view(*existing)
 	return &v, nil
 }
 
@@ -361,6 +415,15 @@ func stringPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// oauthUserID OAuth 凭证的稳定 user_id：优先 uid_<account_uid>，
+// 账号信息缺失时退回 oauth_<token 哈希>（旧行为）。
+func oauthUserID(td *codebuddy.TokenData, account *codebuddy.Account) string {
+	if account != nil && account.UID != "" {
+		return "uid_" + account.UID
+	}
+	return "oauth_" + shortHash(td.AccessToken)
 }
 
 // shortHash 取 token 的 SHA-256 前 12 位作 oauth user_id 后缀。

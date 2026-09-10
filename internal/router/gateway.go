@@ -21,6 +21,7 @@ type RouterDeps struct {
 	OpenAIHandler      *handler.OpenAIHandler
 	AdminStubHandler   *handler.AdminStubHandler
 	CodeBuddyAuthHandler *handler.CodeBuddyAuthHandler
+	TraeAuthHandler    *handler.TraeAuthHandler
 	SessionService     service.SessionService
 	APIKeyService      service.APIKeyService
 }
@@ -100,6 +101,19 @@ func InitGatewayRouter(deps RouterDeps, s *gin.Engine) {
 		codebuddyAuth.POST("/auth/poll", deps.CodeBuddyAuthHandler.Poll)
 		codebuddyAuth.POST("/auth/cancel", deps.CodeBuddyAuthHandler.Cancel)
 	}
+
+	// TRAE 网页登录（会话 Cookie 保护）
+	traeAuth := s.Group("/api/admin/trae/login")
+	traeAuth.Use(middleware.SessionAuth(deps.Logger, deps.SessionService))
+	{
+		traeAuth.POST("/start", deps.TraeAuthHandler.Start)
+		traeAuth.GET("/result", deps.TraeAuthHandler.Result)
+		traeAuth.POST("/cancel", deps.TraeAuthHandler.Cancel)
+		traeAuth.POST("/import", deps.TraeAuthHandler.Import)
+	}
+
+	// TRAE 登录回调落点（公共：浏览器 302 落点，归属校验在 service 内完成）
+	s.GET("/authorize", deps.TraeAuthHandler.Authorize)
 
 	// OpenAI 兼容入口（API Key 保护）
 	openai := s.Group("/openai/v1")

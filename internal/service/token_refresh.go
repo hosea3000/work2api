@@ -81,6 +81,9 @@ func (s *TokenRefreshService) scanOnce(ctx context.Context) {
 	}
 	now := time.Now().Unix()
 	for _, view := range all {
+		if !isCodebuddyView(view) {
+			continue // TRAE 凭证由 trae 刷新逻辑负责（二期），codebuddy 刷新接口不得触碰
+		}
 		select {
 		case <-ctx.Done():
 			return

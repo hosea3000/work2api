@@ -40,3 +40,16 @@ func TestShouldRefreshMatrix(t *testing.T) {
 		t.Error("nil credential must not refresh")
 	}
 }
+
+func TestScanSkipsTraeCredentials(t *testing.T) {
+	// trae 凭证不得进入 codebuddy 刷新扫描
+	if !isCodebuddyView(CredentialView{Provider: "codebuddy"}) {
+		t.Error("codebuddy view should pass filter")
+	}
+	if !isCodebuddyView(CredentialView{}) {
+		t.Error("legacy empty provider should pass filter")
+	}
+	if isCodebuddyView(CredentialView{Provider: "trae"}) {
+		t.Error("trae view must be excluded from codebuddy refresh scan")
+	}
+}

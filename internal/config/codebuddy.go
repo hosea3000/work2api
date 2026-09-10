@@ -24,6 +24,7 @@ type CodeBuddyConfig struct {
 	ModelsCacheTTL    int
 	AdminUsername     string
 	AdminPassword     string
+	TraeCallbackPort  int
 }
 
 // DefaultModels 与参考实现 DEFAULT_CODEBUDDY_MODELS 对齐。
@@ -43,6 +44,7 @@ func LoadCodeBuddyConfig(conf *viper.Viper) (*CodeBuddyConfig, error) {
 		ModelsCacheTTL:   conf.GetInt("codebuddy.models_cache_ttl_seconds"),
 		AdminUsername:    conf.GetString("codebuddy.admin_username"),
 		AdminPassword:    conf.GetString("codebuddy.admin_password"),
+		TraeCallbackPort: conf.GetInt("trae.callback_port"),
 		AllowedEndpoints: splitCSV(conf.GetString("codebuddy.allowed_endpoints")),
 		Models:           splitCSV(conf.GetString("codebuddy.models")),
 	}
@@ -66,6 +68,9 @@ func LoadCodeBuddyConfig(conf *viper.Viper) (*CodeBuddyConfig, error) {
 	}
 	if c.AdminPassword == "" {
 		return nil, fmt.Errorf("codebuddy.admin_password is required for initial admin bootstrap")
+	}
+	if c.TraeCallbackPort <= 0 {
+		c.TraeCallbackPort = 18080
 	}
 
 	if u, err := url.Parse(c.APIEndpoint); err != nil || u.Scheme != "https" || u.Host == "" {

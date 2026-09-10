@@ -34,13 +34,23 @@ func NewCredentialPool(conf *config.CodeBuddyConfig) *CredentialPool {
 	}
 }
 
-// LoadAll 用 DB 中的全部 active 凭证重建池。
+// isCodebuddy 报告凭证是否属于 codebuddy provider（池与调度路径只装 codebuddy）。
+func isCodebuddy(c model.Credential) bool {
+	return c.Provider == "" || c.Provider == "codebuddy"
+}
+
+// isCodebuddyView isCodebuddy 的 CredentialView 版本。
+func isCodebuddyView(c CredentialView) bool {
+	return c.Provider == "" || c.Provider == "codebuddy"
+}
+
+// LoadAll 用 DB 中的全部 active codebuddy 凭证重建池。
 func (p *CredentialPool) LoadAll(creds []model.Credential) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	entries := make([]PoolEntry, 0, len(creds))
 	for _, c := range creds {
-		if c.Status != "active" {
+		if c.Status != "active" || !isCodebuddy(c) {
 			continue
 		}
 		entries = append(entries, toPoolEntry(c))
@@ -60,7 +70,7 @@ func (p *CredentialPool) Refresh(creds []model.Credential) {
 	}
 	entries := make([]PoolEntry, 0, len(creds))
 	for _, c := range creds {
-		if c.Status != "active" {
+		if c.Status != "active" || !isCodebuddy(c) {
 			continue
 		}
 		entries = append(entries, toPoolEntry(c))
