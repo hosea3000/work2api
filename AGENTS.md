@@ -4,11 +4,11 @@ CodeBuddy / TRAE 网关：Go（Gin + GORM + SQLite）后端 + `web/` Vue3 管理
 
 ## 常用命令
 
-- 启动服务：`go run ./cmd/server`（默认读 `config/local.yml`，可用 `APP_CONF` 或 `-conf` 覆盖；默认端口 8000）
-- 初始化 / 迁移数据库：`go run ./cmd/migration`
+- 启动服务：`go run ./cmd/server`（默认读 `config/local.yml`，可用 `APP_CONF` 或 `-conf` 覆盖；默认端口 8000）。首启动需 `codebuddy.admin_password`（建户），TRAE 网页登录回调端口 `trae.callback_port`（默认 18080，远程部署需映射）
+- 初始化 / 迁移数据库：`go run ./cmd/migration`（服务启动时 `EnsureSchema` 也会自愈建表，通常可跳过）
 - 构建：`make build` → `./bin/server`
 - 测试：`go test ./...`（`go test -race ./internal/...`）。注意 `make test` 只跑 `./test/server/...`（nunu 脚手架测试），`internal/**` 的单测不在其中
-- 前端：`cd web && pnpm install && pnpm run build:bundle`；另有 `pnpm typecheck` / `pnpm lint`(oxlint) / `pnpm format`(prettier)
+- 前端：`cd web && pnpm install && pnpm run build:bundle`；`pnpm typecheck` / `pnpm lint`(oxlint) / `pnpm format`(prettier) / `pnpm test`(vitest) / `pnpm e2e`(playwright)
 
 ## 前端嵌入（易踩坑）
 
@@ -31,6 +31,7 @@ CodeBuddy / TRAE 网关：Go（Gin + GORM + SQLite）后端 + `web/` Vue3 管理
 
 - `internal/service` 业务（凭证池、聊天执行器）；`internal/upstream/{codebuddy,trae}` 上游协议；`internal/handler` + `internal/router` HTTP；`internal/repository` 数据访问；`internal/bootstrap` 启动钩子；`internal/middleware` 鉴权等。
 - 聊天请求计数：`middleware.RecordRequest` 只挂在 4 个 chat completions 路由（外部 + Playground，两 provider），`/models` 不计数。
+- `GET/PUT /api/admin/settings` 目前为打桩（见 `internal/handler/admin_stub_handler.go`），设置持久化在后续计划中。
 
 ## OpenSpec 工作流
 

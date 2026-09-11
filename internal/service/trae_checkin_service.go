@@ -151,7 +151,7 @@ func (s *traeCheckinService) jitter(ctx context.Context) bool {
 	if maxMs <= minMs {
 		return true
 	}
-	delay := time.Duration(minMs + s.rand.Int63n(maxMs-minMs)) * time.Millisecond
+	delay := time.Duration(minMs+s.rand.Int63n(maxMs-minMs)) * time.Millisecond
 	select {
 	case <-time.After(delay):
 		return true
